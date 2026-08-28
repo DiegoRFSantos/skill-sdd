@@ -31,13 +31,29 @@ Todo mundo já viveu isto:
 
 ## Instalação
 
+Dentro do Claude Code, adicione este repositório como marketplace:
+
 ```bash
-/plugin marketplace add ~/Developer/sdd-skill
+/plugin marketplace add DiegoRFSantos/skill-sdd
 ```
+
+E instale o plugin:
 
 ```bash
 /plugin install sdd@sdd-marketplace
 ```
+
+Pelo terminal, se você tiver o CLI do Claude Code:
+
+```bash
+claude plugin marketplace add DiegoRFSantos/skill-sdd
+```
+
+```bash
+claude plugin install sdd@sdd-marketplace
+```
+
+Para fixar uma versão específica, use a tag: `DiegoRFSantos/skill-sdd@v1.1.0`.
 
 Depois é só falar normalmente — a skill se ativa sozinha em pedidos de
 feature, mudança, bug ou revisão de artefato.

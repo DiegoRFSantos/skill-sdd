@@ -7,7 +7,27 @@
     {
       "name": "sdd",
       "source": "./",
-      "description": "Spec-Driven Development lifecycle: artifact authoring, two-tier quality gate, execution, fast-track and troubleshooting lanes."
+      "description": "Spec-Driven Development lifecycle: artifact authoring, two-tier quality gate, execution, fast-track and troubleshooting lanes.",
+      "version": "1.1.0",
+      "author": {
+        "name": "Diego R F Santos"
+      },
+      "homepage": "https://github.com/DiegoRFSantos/skill-sdd",
+      "license": "MIT",
+      "keywords": [
+        "spec-driven-development",
+        "sdd",
+        "specification",
+        "planning",
+        "architecture",
+        "adr",
+        "quality-gate",
+        "requirements",
+        "tdd",
+        "workflow"
+      ],
+      "category": "workflow"
     }
-  ]
+  ],
+  "description": "Spec-Driven Development for Claude Code: gated artifacts, zero inference, human decision supremacy."
 }
