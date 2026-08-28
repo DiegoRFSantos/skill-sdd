@@ -1,0 +1,3 @@
+[
+  { "file": "spec.md", "rule_id": "FM_ABSENT", "severity": "blocker", "line": 1, "message": "file has no YAML frontmatter block" }
+]

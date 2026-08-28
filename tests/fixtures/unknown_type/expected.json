@@ -1,0 +1,3 @@
+[
+  { "file": "spec.md", "rule_id": "FM_UNKNOWN_TYPE", "severity": "blocker", "line": 1, "message": "unknown artifact type: blueprint" }
+]

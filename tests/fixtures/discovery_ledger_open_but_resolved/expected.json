@@ -1,0 +1,9 @@
+[
+  {
+    "file": "discovery.md",
+    "rule_id": "DISC_LEDGER_OPEN",
+    "severity": "blocker",
+    "line": 119,
+    "message": "open-question ledger row Q-02 is still 'open' while discovery status is 'resolved'"
+  }
+]

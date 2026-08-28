@@ -1,0 +1,9 @@
+[
+  {
+    "file": "test-catalog.md",
+    "rule_id": "CATALOG_UNKNOWN_ID",
+    "severity": "blocker",
+    "line": 22,
+    "message": "test case covers spec id 'AC-99' which does not exist in SPEC-FEAT-CUID"
+  }
+]

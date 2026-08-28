@@ -1,0 +1,23 @@
+[
+  {
+    "file": "test-catalog.md",
+    "rule_id": "CATALOG_EMPTY",
+    "severity": "blocker",
+    "line": 1,
+    "message": "test catalog has no test cases in section 2"
+  },
+  {
+    "file": "test-catalog.md",
+    "rule_id": "REF_UNRESOLVED",
+    "severity": "blocker",
+    "line": 1,
+    "message": "design_ref 'DESIGN-FEAT-EMPTY' does not resolve to an existing design artifact"
+  },
+  {
+    "file": "test-catalog.md",
+    "rule_id": "REF_UNRESOLVED",
+    "severity": "blocker",
+    "line": 1,
+    "message": "spec_ref 'SPEC-FEAT-EMPTY' does not resolve to an existing spec artifact"
+  }
+]

@@ -1,0 +1,9 @@
+[
+  {
+    "file": "spec.md",
+    "rule_id": "PLACEHOLDER_TODO",
+    "severity": "blocker",
+    "line": 15,
+    "message": "placeholder 'TODO' is a hard blocker"
+  }
+]

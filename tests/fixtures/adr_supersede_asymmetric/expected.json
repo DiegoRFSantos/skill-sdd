@@ -1,0 +1,9 @@
+[
+  {
+    "file": "0002-new-decision.md",
+    "rule_id": "ADR_SUPERSEDE_ASYMMETRIC",
+    "severity": "blocker",
+    "line": 1,
+    "message": "this ADR supersedes ADR-0001, but ADR-0001's superseded_by does not point back (found 'null')"
+  }
+]

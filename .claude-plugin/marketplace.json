@@ -1,0 +1,11 @@
+{
+  "name": "sdd-marketplace",
+  "owner": { "name": "Diego R F Santos" },
+  "plugins": [
+    {
+      "name": "sdd",
+      "source": "./",
+      "description": "Spec-Driven Development lifecycle: artifact authoring, quality gate, and execution."
+    }
+  ]
+}

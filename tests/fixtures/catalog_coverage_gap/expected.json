@@ -1,0 +1,9 @@
+[
+  {
+    "file": "test-catalog.md",
+    "rule_id": "CATALOG_COVERAGE_GAP",
+    "severity": "review",
+    "line": 1,
+    "message": "acceptance/edge-case id 'AC-02' has no test case in section 2 and is not listed in section 3 Deliberate Gaps"
+  }
+]

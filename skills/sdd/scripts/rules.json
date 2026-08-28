@@ -1,0 +1,187 @@
+{
+  "version": 1,
+  "placeholder_patterns": [
+    { "id": "PLACEHOLDER_TODO", "regex": "\\bTODO\\b", "message": "placeholder 'TODO' is a hard blocker" },
+    { "id": "PLACEHOLDER_TBD", "regex": "\\bTBD\\b", "message": "placeholder 'TBD' is a hard blocker" },
+    { "id": "PLACEHOLDER_FIXME", "regex": "\\bFIXME\\b", "message": "placeholder 'FIXME' is a hard blocker" },
+    { "id": "PLACEHOLDER_ETC", "regex": "\\betc\\.", "message": "'etc.' hides an unspecified case; enumerate it" },
+    { "id": "PLACEHOLDER_ANGLE", "regex": "<[A-Za-z][A-Za-z0-9 _-]*>", "message": "unfilled placeholder token" },
+    { "id": "PLACEHOLDER_EMPTY_OBJ", "regex": "\"data\"\\s*:\\s*\\{\\s*\\}", "message": "empty schema object is not a contract" }
+  ],
+  "artifacts": {
+    "spec": {
+      "frontmatter": {
+        "required": ["id", "type", "feature", "created_at", "updated_at", "author", "version", "status"],
+        "enums": {
+          "type": ["spec"],
+          "status": ["draft", "in_review", "active", "deprecated"]
+        },
+        "patterns": {
+          "id": "^SPEC-FEAT-[A-Z0-9-]+$",
+          "feature": "^[a-z0-9]+(-[a-z0-9]+)*$",
+          "created_at": "^\\d{4}-\\d{2}-\\d{2}$",
+          "updated_at": "^\\d{4}-\\d{2}-\\d{2}$",
+          "version": "^\\d+\\.\\d+\\.\\d+$"
+        },
+        "refs": {}
+      },
+      "sections": [
+        "## 1. Context & Purpose",
+        "## 2. Ubiquitous Language",
+        "## 3. Actors",
+        "## 4. Scope & Non-Goals",
+        "## 5. Business Rules",
+        "## 6. Acceptance Criteria",
+        "## 7. Edge Cases & Failure Modes",
+        "## 8. Success Metrics",
+        "## 9. Traceability Matrix",
+        "## 10. Open Questions",
+        "## 11. Change Log"
+      ],
+      "forbidden": [
+        { "id": "SPEC_TECH_HTTP_VERB", "regex": "\\b(POST|GET|PUT|PATCH|DELETE)\\s+/", "message": "HTTP route leaked into spec; belongs in design.md" },
+        { "id": "SPEC_TECH_SQL", "regex": "\\b(SELECT|INSERT INTO|UPDATE\\s+\\w+\\s+SET|CREATE TABLE)\\b", "message": "SQL leaked into spec; belongs in design.md" },
+        { "id": "SPEC_TECH_STACK", "regex": "\\b(PostgreSQL|DynamoDB|Redis|Kafka|RabbitMQ|Angular|React|\\.NET|Lambda)\\b", "message": "technology name leaked into spec; belongs in design.md" }
+      ],
+      "checks": []
+    },
+    "discovery": {
+      "frontmatter": {
+        "required": ["id", "type", "feature", "created_at", "updated_at", "author", "status"],
+        "enums": { "type": ["discovery"], "status": ["draft", "resolved"] },
+        "patterns": {
+          "id": "^DISC-FEAT-[A-Z0-9-]+$",
+          "feature": "^[a-z0-9]+(-[a-z0-9]+)*$",
+          "created_at": "^\\d{4}-\\d{2}-\\d{2}$",
+          "updated_at": "^\\d{4}-\\d{2}-\\d{2}$"
+        },
+        "refs": {}
+      },
+      "sections": [
+        "## 1. Problem Statement",
+        "## 2. Challenge Pass",
+        "## 3. Alternatives Considered",
+        "## 4. Role-Play Log",
+        "## 5. Open-Question Ledger",
+        "## 6. Accepted Risks",
+        "## 7. Decision & Rationale"
+      ],
+      "forbidden": [],
+      "checks": ["discovery_ledger_empty_when_resolved"]
+    },
+    "design": {
+      "frontmatter": {
+        "required": ["id", "type", "feature", "spec_ref", "created_at", "updated_at", "author", "version", "status"],
+        "enums": { "type": ["design"], "status": ["draft", "in_review", "active", "deprecated"] },
+        "patterns": {
+          "id": "^DESIGN-FEAT-[A-Z0-9-]+$",
+          "spec_ref": "^SPEC-FEAT-[A-Z0-9-]+$",
+          "feature": "^[a-z0-9]+(-[a-z0-9]+)*$",
+          "created_at": "^\\d{4}-\\d{2}-\\d{2}$",
+          "updated_at": "^\\d{4}-\\d{2}-\\d{2}$",
+          "version": "^\\d+\\.\\d+\\.\\d+$"
+        },
+        "refs": { "spec_ref": "spec", "dependencies": "adr" }
+      },
+      "sections": [
+        "## 1. Architecture & Components",
+        "## 2. Data Model",
+        "## 3. Contracts",
+        "## 4. Interaction Flows",
+        "## 5. Resilience & Security",
+        "## 6. Observability",
+        "## 7. ADR Conformance",
+        "## 8. Traceability",
+        "## 9. Change Log"
+      ],
+      "forbidden": [
+        { "id": "DESIGN_LOOSE_TYPE_ANY", "regex": "\\btype\\s*:\\s*any\\b", "message": "loose type 'any' is not a contract; specify the concrete type" },
+        { "id": "DESIGN_BARE_OBJECT", "regex": "\\btype\\s*:\\s*object\\s*$", "message": "bare 'object' without properties is not a contract" }
+      ],
+      "checks": []
+    },
+    "test-catalog": {
+      "frontmatter": {
+        "required": ["id", "type", "feature", "spec_ref", "design_ref", "created_at", "updated_at", "author", "status"],
+        "enums": { "type": ["test-catalog"], "status": ["draft", "active", "deprecated"] },
+        "patterns": {
+          "id": "^TESTS-FEAT-[A-Z0-9-]+$",
+          "spec_ref": "^SPEC-FEAT-[A-Z0-9-]+$",
+          "design_ref": "^DESIGN-FEAT-[A-Z0-9-]+$",
+          "feature": "^[a-z0-9]+(-[a-z0-9]+)*$",
+          "created_at": "^\\d{4}-\\d{2}-\\d{2}$",
+          "updated_at": "^\\d{4}-\\d{2}-\\d{2}$"
+        },
+        "refs": { "spec_ref": "spec", "design_ref": "design" }
+      },
+      "sections": ["## 1. Coverage Summary", "## 2. Test Cases", "## 3. Deliberate Gaps"],
+      "forbidden": [],
+      "checks": ["catalog_non_empty", "catalog_ids_resolve", "catalog_coverage_prompt"]
+    },
+    "adr": {
+      "frontmatter": {
+        "required": ["id", "type", "title", "created_at", "updated_at", "author", "status"],
+        "enums": { "type": ["adr"], "status": ["draft", "proposed", "accepted", "rejected", "deprecated", "superseded"] },
+        "patterns": {
+          "id": "^ADR-\\d{4}$",
+          "created_at": "^\\d{4}-\\d{2}-\\d{2}$",
+          "updated_at": "^\\d{4}-\\d{2}-\\d{2}$"
+        },
+        "refs": { "supersedes": "adr", "superseded_by": "adr" }
+      },
+      "sections": [
+        "## 1. Status",
+        "## 2. Context & Problem Statement",
+        "## 3. Decision Drivers",
+        "## 4. Considered Options",
+        "## 5. Decision Outcome",
+        "## 6. Consequences & Trade-Offs",
+        "## 7. Compliance Verification"
+      ],
+      "forbidden": [],
+      "checks": ["adr_supersede_symmetry"]
+    },
+    "plan": {
+      "frontmatter": {
+        "required": ["id", "type", "feature", "spec_ref", "design_ref", "created_at", "updated_at", "author", "status", "allocated_agents", "milestones"],
+        "enums": { "type": ["plan"], "status": ["draft", "active", "completed", "blocked", "cancelled"] },
+        "patterns": {
+          "id": "^PLAN-FEAT-[A-Z0-9-]+$",
+          "spec_ref": "^SPEC-FEAT-[A-Z0-9-]+$",
+          "design_ref": "^DESIGN-FEAT-[A-Z0-9-]+$",
+          "feature": "^[a-z0-9]+(-[a-z0-9]+)*$",
+          "created_at": "^\\d{4}-\\d{2}-\\d{2}$",
+          "updated_at": "^\\d{4}-\\d{2}-\\d{2}$"
+        },
+        "refs": { "spec_ref": "spec", "design_ref": "design" }
+      },
+      "sections": [
+        "## 1. Delivery Milestones & Scope Breakdown",
+        "## 2. Dependency Graph & Concurrency Model",
+        "## 3. Pre-Implementation Test Harness Strategy",
+        "## 4. Agent Roles & Allocation",
+        "## 5. Circuit Breaker & Blocker Protocol"
+      ],
+      "forbidden": [],
+      "checks": ["plan_coverage_threshold_declared"]
+    },
+    "tasks": {
+      "frontmatter": {
+        "required": ["id", "type", "plan_ref", "feature", "created_at", "updated_at", "status", "progress", "current_milestone"],
+        "enums": { "type": ["tasks"], "status": ["ready", "in_progress", "blocked", "done"] },
+        "patterns": {
+          "id": "^TASKS-FEAT-[A-Z0-9-]+$",
+          "plan_ref": "^PLAN-FEAT-[A-Z0-9-]+$",
+          "feature": "^[a-z0-9]+(-[a-z0-9]+)*$",
+          "created_at": "^\\d{4}-\\d{2}-\\d{2}$",
+          "updated_at": "^\\d{4}-\\d{2}-\\d{2}$",
+          "progress": "^\\d+/\\d+$"
+        },
+        "refs": { "plan_ref": "plan" }
+      },
+      "sections": ["## Execution Scratchpad & Blocker Log"],
+      "forbidden": [],
+      "checks": ["tasks_tags", "tasks_progress", "tasks_depends_on", "tasks_cycles"]
+    }
+  }
+}

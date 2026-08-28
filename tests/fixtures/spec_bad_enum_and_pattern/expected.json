@@ -1,0 +1,7 @@
+[
+  { "file": "spec.md", "rule_id": "FM_BAD_ENUM", "severity": "blocker", "line": 1, "message": "frontmatter key 'status' has value 'published'; allowed: draft, in_review, active, deprecated" },
+  { "file": "spec.md", "rule_id": "FM_BAD_PATTERN", "severity": "blocker", "line": 1, "message": "frontmatter key 'created_at' value '18/08/2026' does not match ^\\d{4}-\\d{2}-\\d{2}$" },
+  { "file": "spec.md", "rule_id": "FM_BAD_PATTERN", "severity": "blocker", "line": 1, "message": "frontmatter key 'feature' value 'Payment_Split' does not match ^[a-z0-9]+(-[a-z0-9]+)*$" },
+  { "file": "spec.md", "rule_id": "FM_BAD_PATTERN", "severity": "blocker", "line": 1, "message": "frontmatter key 'id' value 'spec-feat-001' does not match ^SPEC-FEAT-[A-Z0-9-]+$" },
+  { "file": "spec.md", "rule_id": "FM_BAD_PATTERN", "severity": "blocker", "line": 1, "message": "frontmatter key 'version' value '1.0' does not match ^\\d+\\.\\d+\\.\\d+$" }
+]

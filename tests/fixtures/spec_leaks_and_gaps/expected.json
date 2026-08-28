@@ -1,0 +1,6 @@
+[
+  { "file": "spec.md", "rule_id": "PLACEHOLDER_TBD", "severity": "blocker", "line": 21, "message": "placeholder 'TBD' is a hard blocker" },
+  { "file": "spec.md", "rule_id": "SECTION_MISSING", "severity": "blocker", "line": 1, "message": "missing required section: ## 11. Change Log" },
+  { "file": "spec.md", "rule_id": "SPEC_TECH_HTTP_VERB", "severity": "blocker", "line": 14, "message": "HTTP route leaked into spec; belongs in design.md" },
+  { "file": "spec.md", "rule_id": "SPEC_TECH_STACK", "severity": "blocker", "line": 14, "message": "technology name leaked into spec; belongs in design.md" }
+]

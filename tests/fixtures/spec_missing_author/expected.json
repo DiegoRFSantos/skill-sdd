@@ -1,0 +1,9 @@
+[
+  {
+    "file": "spec.md",
+    "rule_id": "FM_MISSING_KEY",
+    "severity": "blocker",
+    "line": 1,
+    "message": "frontmatter missing required key: author"
+  }
+]

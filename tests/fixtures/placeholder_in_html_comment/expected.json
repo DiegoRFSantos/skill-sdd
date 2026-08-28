@@ -1,0 +1,9 @@
+[
+  {
+    "file": "spec.md",
+    "rule_id": "PLACEHOLDER_ANGLE",
+    "severity": "blocker",
+    "line": 15,
+    "message": "unfilled placeholder token"
+  }
+]

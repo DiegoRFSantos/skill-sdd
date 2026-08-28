@@ -1,0 +1,6 @@
+{
+  "name": "sdd",
+  "description": "Spec-Driven Development: discovery, spec, design, ADRs, test catalog, plan/tasks, quality gate, and execution.",
+  "version": "1.0.0",
+  "author": { "name": "Diego R F Santos" }
+}

@@ -1,0 +1,16 @@
+[
+  {
+    "file": "plan.md",
+    "rule_id": "REF_UNRESOLVED",
+    "severity": "blocker",
+    "line": 1,
+    "message": "design_ref 'DESIGN-FEAT-001' does not resolve to an existing design artifact"
+  },
+  {
+    "file": "plan.md",
+    "rule_id": "REF_UNRESOLVED",
+    "severity": "blocker",
+    "line": 1,
+    "message": "spec_ref 'SPEC-FEAT-001' does not resolve to an existing spec artifact"
+  }
+]
