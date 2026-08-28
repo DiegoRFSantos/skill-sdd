@@ -20,6 +20,27 @@ quality gate sends it back — a Tier 2 `user_decisions_required` item, or a
 `review`-severity finding the user wants addressed. Both route back into the
 interview, not into a silent edit of the artifact.
 
+## The summary preview is not the forbidden draft
+
+`references/summary-preview.md` has the agent show a 15-line sketch before
+writing the full artifact. That is not a violation of the rule above, and
+the difference is the ordering:
+
+- The forbidden draft comes **before** the interview and contains the
+  model's guesses. The user reacts to those guesses instead of generating
+  their own answer — which is the whole anchoring problem.
+- The preview comes **after** the interview has reached zero ambiguity and
+  contains nothing but the user's own answers, restated in plain language.
+  There is nothing in it for the user to be anchored on that they did not
+  say themselves.
+
+So the order is fixed and not negotiable: interview to zero ambiguity →
+preview (if the preference calls for one) → full artifact. Never show a
+preview while a question is still open, and never use one as a way to get
+the conversation moving before the questions have been asked. A preview
+containing a single thing the user did not say is the forbidden draft
+wearing a smaller word count.
+
 ## Question discipline
 
 One question per message. Resist the urge to list several and let the user

@@ -8,6 +8,14 @@ created_at: 2026-08-18
 updated_at: 2026-08-18
 author: Diego
 status: draft                # draft | active | deprecated
+validation:
+  - tier1: pass
+  - tier1_at: 2026-08-18
+  - tier2_score: n/a
+  - tier2_verdict: n/a
+  - tier2_at: n/a
+  - tier2_rounds: 0
+  - notes: "No Tier 2 rubric for a catalog. Human sign-off on 2026-08-18 is the gate; deliberate gaps are recorded in section 3."
 ---
 
 <!--

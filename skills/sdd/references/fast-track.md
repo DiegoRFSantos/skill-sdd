@@ -16,16 +16,11 @@ A change is fast-track eligible only when **all three** hold:
 3. It introduces no new tables, message topics, or third-party
    integrations.
 
-This restates `README.md`'s Fast-track section verbatim except for one
-deliberate tightening: criterion 2's "at most 3 files, or under 50 changed
-lines" is ambiguous about what happens when the two disagree — 2 files but
-80 lines, or 5 files at 10 lines each. Read it as **AND, not OR**: a change
-is only eligible if it is both `<= 3 files` and `< 50 changed lines`.
-Fast-track is meant to be a narrow, low-risk lane; a change that fails
-either measure is not narrow, regardless of how it does on the other one.
-If this stricter reading and the README ever appear to diverge, this is a
-clarification of the README's ambiguous "or," not a contradiction of it —
-the three criteria themselves are unchanged.
+Criterion 2 is **AND, not OR**: a change is only eligible if it is both
+`<= 3 files` and `< 50 changed lines`. Neither measure rescues the other —
+2 files at 80 lines fails, and 5 files at 10 lines each fails. Fast-track
+is meant to be a narrow, low-risk lane; a change that misses either bound
+is not narrow, regardless of how comfortably it clears the other.
 
 ### What counts as a new domain invariant (criterion 1)
 
@@ -70,7 +65,7 @@ Work through this before touching any file:
    a third-party integration that doesn't already exist for this feature?
 4. **Apply the AND rule from criterion 2** to the estimate from step 1.
 5. **Decide.** All three hold → proceed down this fast-track path. Any one
-   fails → this is not fast-track; go back to `SKILL.md` Step 2 and route
+   fails → this is not fast-track; go back to `SKILL.md` Step 3 and route
    through the full lifecycle (discovery if the change isn't well
    understood yet, otherwise spec → design → test-catalog → plan/tasks).
 
@@ -98,7 +93,7 @@ doesn't hold, full stop. Before proceeding:
 
 If either check fails, this isn't a fast-track case — route to
 `references/discovery.md` or `references/artifact-spec.md` per `SKILL.md`
-Step 2 instead.
+Step 3 instead.
 
 ## What "update the living spec directly" means
 
@@ -131,6 +126,13 @@ Tier 1 is cheap and deterministic — it catches real mistakes (a broken
 cross-reference, a dangling placeholder, a traceability gap introduced by
 the edit) regardless of how small the change was, so there is no size
 threshold below which it's safe to skip.
+
+Update the spec's `validation:` frontmatter block with this run: `tier1`
+and `tier1_at` reflect what just happened, the Tier 2 fields keep their
+existing values, and `notes` gains one clause saying a fast-track edit was
+made and re-linted without a fresh judge pass. Leaving the old block
+untouched would claim the current text was gated when only its predecessor
+was.
 
 Fast-track does **not** require a fresh Tier 2 judge pass on every change.
 Tier 2 exists to catch semantic authoring defects — a vague business rule,

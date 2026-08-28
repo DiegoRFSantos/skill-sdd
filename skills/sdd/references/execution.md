@@ -7,20 +7,49 @@ when all of the following are true:
 
 - `plan.md` and `tasks.md` exist, `plan.md` is `status: active`, and
   `tasks.md`'s frontmatter shows `status: ready` or `in_progress`.
-- Both have passed Tier 1 (`sdd_lint.py`/`sdd_lint.mjs`) with zero findings.
-- Both have passed Tier 2 per `references/quality-gate.md`'s plan+tasks
-  rubric — scored as a pair, by a genuinely independent judge subagent, at
-  >=90/100 — unless that pass already happened as part of authoring and
-  nothing has changed since. Any material edit to either file after a PASS
-  invalidates that PASS; re-run both tiers before resuming execution.
+- Their `validation:` frontmatter blocks record a Tier 1 pass and a Tier 2
+  `PASS`, per `references/quality-gate.md`.
 
-If either file is missing, still `draft`, or has an open Tier 1/Tier 2
-finding, go back to `references/artifact-plan-tasks.md` and
+If either file is missing, still `draft`, or its recorded verdict is `FAIL`,
+go back to `references/artifact-plan-tasks.md` and
 `references/quality-gate.md` — do not patch the gap by executing anyway and
 fixing it "along the way." A `tasks.md` that hasn't earned its gate is not a
 safe map to build from: a milestone sliced by technical layer instead of
 value, or a missing `depends_on`, turns into a real ordering bug once agents
 start touching files in parallel.
+
+## Read the recorded gate — do not re-run it
+
+**Execution does not re-validate artifacts. By default it re-runs nothing —
+not Tier 1, not Tier 2, not on `plan.md`, `tasks.md`, `spec.md`, or
+`design.md`.** The gate already ran when each artifact was authored, and the
+result is recorded in that artifact's `validation:` block. Checking the
+precondition above means *reading those blocks*, not reproducing the work
+they describe.
+
+The temptation to "just re-lint quickly before we start" is the thing this
+rule exists to stop. It burns a judge dispatch and several minutes on a
+document nobody has touched since it passed, it delays the code the user
+actually asked for, and it teaches the human that the recorded score means
+nothing — which is precisely how a recorded score stops being written.
+
+Two situations, and only two, change this:
+
+- **A `validation:` block is missing or incomplete** — the artifact predates
+  this convention, or a gate ran without recording. Do not silently
+  re-validate and do not silently proceed. Say which artifact lacks a
+  recorded gate, and ask: run the gate now, or proceed on the human's word
+  that it passed? Their answer decides. If they choose to proceed, note in
+  the session that execution started on an unrecorded gate.
+- **The artifact changed after its recorded gate** — `updated_at` is later
+  than `tier2_at`, or the human says they edited it. That is a material
+  edit, and `references/quality-gate.md` already governs it: re-run both
+  tiers on the changed artifact before its work is executed.
+
+If the human explicitly asks for a re-validation at implementation time,
+run it — an explicit request outranks the default, the same way it does
+everywhere else in this skill. What is forbidden is deciding to re-validate
+on your own initiative because it felt safer.
 
 ## The worktree-and-subagent execution model
 
@@ -59,7 +88,7 @@ verification happens at manual checkpoints after each task instead of via
 a merge. The dependency graph and the fresh-subagent-per-task rule still
 apply; only the filesystem isolation and the "streams run concurrently"
 property are lost. Say explicitly when this fallback is in effect, the same
-way Tier 1's absence gets flagged in `SKILL.md` Step 3 — a silently
+way Tier 1's absence gets flagged in `SKILL.md` Step 5 — a silently
 degraded execution mode is as dangerous as a silently skipped gate.
 
 ## Model resolution: read, never re-decide
@@ -216,3 +245,45 @@ why, so the human can see the fix happened and isn't left wondering why a
 diff touches a file the task never mentioned. Silence is the failure mode
 here, not the fix itself — an undisclosed scope expansion is indistinguishable
 from scope creep even when the underlying fix was the right call.
+
+
+## Closing out the plan — `plan.md` and `tasks.md` are ephemeral
+
+`spec.md`, `design.md`, `test-catalog.md` and the ADRs are durable: they
+describe what the system is, and they stay. `plan.md` and `tasks.md` are
+not. They describe how one delivery was sequenced — milestones, streams,
+`depends_on` edges, a checklist that is now entirely `[x]`. Once the work
+has shipped, they answer a question nobody asks again, and leaving them in
+the feature folder makes a shipped feature look like it has work still in
+flight.
+
+Both live in the feature's own folder alongside everything else:
+
+```
+.specs/features/<feature>/{discovery,spec,design,test-catalog,plan,tasks}.md
+```
+
+When the final milestone closes — every `[REQUIRED]` task `[x]`, coverage
+task included:
+
+1. **Mark them done.** `plan.md` gets `status: completed`, `tasks.md` gets
+   `status: done`, both get today's `updated_at`. Do this first, so the
+   state is correct on disk no matter what the human chooses next.
+2. **Make sure nothing durable only lives here.** Walk `tasks.md`'s
+   "## Execution Scratchpad & Blocker Log" before disposing of anything. A
+   blocker whose resolution changed how the feature actually behaves belongs
+   in `spec.md` or `design.md`, not in a file about to be deleted. Move it,
+   then continue.
+3. **Ask the human what to do with the pair.** Two options, and it is their
+   call, never a silent cleanup:
+   - **Delete** both files. Recommended when the repo has git — history
+     keeps them, and the feature folder stays down to the artifacts that
+     still describe the system.
+   - **Archive** both into `.specs/features/<feature>/archive/`. Recommended
+     when the repo has no git history, since deletion there is
+     unrecoverable.
+4. **Say which happened**, in one line, with the milestone summary.
+
+Never delete or archive on your own initiative, and never do either while
+any `[REQUIRED]` task is still `[ ]`, `[/]`, or `[!]` — an unfinished plan
+being tidied away is indistinguishable from work silently dropped.

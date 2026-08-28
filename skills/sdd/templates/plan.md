@@ -34,6 +34,14 @@ milestones:
   - M3: "Payment Ledger Event Integration & Sign-Off"
 dependencies:                  # optional; ADRs this plan's agents must comply with while executing it
   - ADR-0002
+validation:                    # written by the quality gate — plan.md and tasks.md are judged as one pair
+  - tier1: pass
+  - tier1_at: 2026-08-18
+  - tier2_score: 91
+  - tier2_verdict: PASS
+  - tier2_at: 2026-08-18
+  - tier2_rounds: 2
+  - notes: "Round 1 scored 84 - M2 was a technical-layer slice, not independently shippable. Re-cut M2 around the recipient-notification path; milestone criterion went 11/20 to 19/20."
 ---
 
 <!--

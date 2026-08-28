@@ -8,6 +8,14 @@ updated_at: 2026-08-18
 status: in_progress            # ready | in_progress | blocked | done
 progress: 4/16
 current_milestone: M1
+validation:                    # written by the quality gate — plan.md and tasks.md are judged as one pair
+  - tier1: pass
+  - tier1_at: 2026-08-18
+  - tier2_score: 91
+  - tier2_verdict: PASS
+  - tier2_at: 2026-08-18
+  - tier2_rounds: 2
+  - notes: "Scored with PLAN-FEAT-001 as a pair. Round 1 flagged Task 2.4 as two outcomes in one line; split into 2.4 and 2.5 before the re-judge."
 ---
 
 <!--

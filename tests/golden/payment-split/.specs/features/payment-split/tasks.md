@@ -8,6 +8,14 @@ updated_at: 2026-08-18
 status: in_progress            # ready | in_progress | blocked | done
 progress: 4/16
 current_milestone: M1
+validation:
+  - tier1: pass
+  - tier1_at: 2026-08-18
+  - tier2_score: 91
+  - tier2_verdict: PASS
+  - tier2_at: 2026-08-18
+  - tier2_rounds: 2
+  - notes: "Judged as a pair with PLAN-FEAT-001. Round 1 flagged Task 2.4 as two outcomes in one line; split before the re-judge."
 ---
 
 <!--

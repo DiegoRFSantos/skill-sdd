@@ -1,86 +1,372 @@
-# sdd
+# sdd — Spec-Driven Development para Claude Code
 
-A Claude Code plugin implementing Spec-Driven Development (SDD): a gated
-artifact pipeline that replaces ad-hoc planning with discovery, spec, design,
-ADRs, a test catalog, and a plan/tasks pair, each checked before the next is
-started. The core rule is zero inference — if a requirement, contract,
-behavior, model choice, or threshold is unstated, the skill halts and asks
-rather than guessing at a plausible answer. Implementation begins only after
-the gate is passed, with a fast-track lane for small changes that don't
-warrant the full chain.
+> **O código não nasce de uma conversa. Nasce de uma especificação aprovada.**
 
-## Install
+`sdd` é um plugin do Claude Code que troca o "planejamento por conversa" por
+um **pipeline de artefatos com portões de qualidade**. Cada etapa produz um
+documento; cada documento passa por um linter determinístico e por um juiz
+semântico independente antes que a próxima etapa comece.
+
+A regra que sustenta tudo é **inferência zero**: se um requisito, contrato,
+comportamento, modelo ou limiar não foi dito, o agente **para e pergunta**.
+Ele nunca preenche a lacuna com um palpite plausível.
+
+---
+
+## Por que isso existe
+
+Todo mundo já viveu isto:
+
+| O que acontece sem SDD | O que o `sdd` faz |
+|---|---|
+| "Entendi, vou implementar" — e o agente inventa metade das regras | Cada lacuna vira uma pergunta direta. `Vou assumir que...` é proibido |
+| O agente concorda com a primeira solução que você propõe | Passe de desafio obrigatório **antes** de qualquer concordância |
+| A spec tem `TODO`, `TBD`, `etc.` e ninguém percebe | São blockers duros no linter, não rascunhos |
+| Você recebe 300 linhas de documento e valida por cansaço | Resumo de **15 linhas em português claro** antes do documento real |
+| "Os testes passaram" — mas ninguém rodou nada | Verificação independente antes de marcar qualquer tarefa como feita |
+| O agente decide o banco, o modelo, o limiar de cobertura | Trade-offs arquiteturais são **sempre** decisão do humano |
+| Um bug vira um refactor de 12 arquivos sem aviso | O agente propõe, e **você** escolhe a via antes de uma linha ser escrita |
+
+---
+
+## Instalação
 
 ```bash
 /plugin marketplace add ~/Developer/sdd-skill
+```
+
+```bash
 /plugin install sdd@sdd-marketplace
 ```
 
-## The lifecycle
+Depois é só falar normalmente — a skill se ativa sozinha em pedidos de
+feature, mudança, bug ou revisão de artefato.
 
+---
+
+## As três vias
+
+O primeiro trabalho da skill não é escrever spec. É **classificar o pedido**.
+Mandar um typo pelo ciclo completo é tão errado quanto mandar uma feature
+nova direto pro código.
+
+```mermaid
+flowchart TD
+    A["Pedido do usuário"] --> B{"Qual é a natureza?"}
+
+    B -->|"Algo quebrou:<br/>bug, teste falhando,<br/>comportamento estranho"| T["🔧 Via Troubleshooting"]
+    B -->|"Mudança pequena em feature<br/>já especificada e ativa"| F["⚡ Via Fast-track"]
+    B -->|"Capacidade nova ou<br/>mudança real de comportamento"| L["📐 Ciclo completo"]
+
+    T --> T1["Entende a causa raiz"]
+    T1 --> T2["Propõe o conserto<br/>e ESPERA você escolher a via"]
+
+    F --> F1["Código + spec viva atualizada<br/>+ Tier 1"]
+
+    L --> L1["discovery → spec → design<br/>→ catálogo → plano → execução"]
+
+    style T fill:#4a2f2f,stroke:#c07a7a,color:#fff
+    style F fill:#2f3f4a,stroke:#7aa8c0,color:#fff
+    style L fill:#2f4a35,stroke:#7ac08a,color:#fff
 ```
-discovery → spec → design (+ADRs) → test-catalog → plan/tasks → execute
+
+**Na dúvida, sobe para a via mais lenta.** Classificar devagar demais custa
+uma passada de plano; classificar rápido demais entrega uma regra de negócio
+que ninguém revisou.
+
+---
+
+## O ciclo completo
+
+```mermaid
+flowchart LR
+    D["discovery.md<br/><i>o problema é real?</i>"] --> S["spec.md<br/><i>o quê e por quê</i>"]
+    S --> DE["design.md<br/><i>como</i>"]
+    DE --> C["test-catalog.md<br/><i>o que provaremos</i>"]
+    C --> P["plan.md + tasks.md<br/><i>em que ordem</i>"]
+    P --> E["execução<br/><i>código verificado</i>"]
+
+    DE -.->|"decisão<br/>transversal"| ADR["ADR-NNNN<br/><i>constituição técnica</i>"]
+
+    S -.->|"portão"| G1(("✓"))
+    DE -.->|"portão"| G2(("✓"))
+    P -.->|"portão"| G3(("✓"))
+
+    style D fill:#3a3a4a,stroke:#8a8ac0,color:#fff
+    style S fill:#2f4a35,stroke:#7ac08a,color:#fff
+    style DE fill:#2f3f4a,stroke:#7aa8c0,color:#fff
+    style C fill:#4a422f,stroke:#c0b07a,color:#fff
+    style P fill:#3f2f4a,stroke:#a87ac0,color:#fff
+    style E fill:#4a2f3f,stroke:#c07aa8,color:#fff
+    style ADR fill:#2a2a2a,stroke:#999,color:#fff
 ```
 
-- **discovery** — is this problem well understood, and what alternatives and
-  risks were considered before committing to a direction?
-- **spec** — what are we building and why, expressed as business rules,
-  Gherkin acceptance criteria, non-goals, and edge cases?
-- **design (+ADRs)** — how will it be built: contracts, schemas, interaction
-  flows, resilience, and observability, plus any cross-cutting architectural
-  decisions recorded as ADRs?
-- **test-catalog** — what are the concrete test scenarios, agreed with a
-  human and mapped back to spec ids, that will prove the spec is met?
-- **plan/tasks** — what are the milestones, the dependency graph, the agent
-  allocation, and the live checklist that will execute the design?
-- **execute** — write the working code against the gated tasks, checking off
-  each one only once its tests pass.
-
-## Artifact map
-
-| Path | Purpose |
+| Etapa | Pergunta que responde |
 |---|---|
-| `.specs/features/<feature>/discovery.md` | Phase 0: problem statement, challenge pass, role-play log, open-question ledger |
-| `.specs/features/<feature>/spec.md` | What and why — business rules, Gherkin acceptance criteria, non-goals, edge cases |
-| `.specs/features/<feature>/design.md` | How — contracts, schemas, interaction flows, resilience, observability |
-| `.specs/features/<feature>/test-catalog.md` | The main test scenarios agreed with a human, mapped to spec ids |
-| `.adrs/NNNN-slug.md` | Immutable cross-cutting architectural decisions |
-| `.specs/plans/<plan-dir>/plan.md` | Milestones, dependency DAG, agent roles, blocker protocol |
-| `.specs/plans/<plan-dir>/tasks.md` | Live task checklist and execution scratchpad |
+| **discovery** | O problema está bem entendido? Que alternativas e riscos foram considerados antes de escolher um caminho? |
+| **spec** | O que vamos construir e por quê — regras de negócio, critérios de aceite em Gherkin, não-objetivos, casos de borda |
+| **design (+ADRs)** | Como será construído — contratos, schemas, fluxos, resiliência, observabilidade |
+| **test-catalog** | Quais cenários concretos, acordados com um humano, provam que a spec foi cumprida |
+| **plan/tasks** | Quais marcos, qual o grafo de dependências, qual agente faz o quê |
+| **execução** | O código, escrito contra tarefas aprovadas, marcado como feito só depois que os testes rodam de verdade |
 
-## Running the linter standalone
+---
 
-The Tier 1 linter is deterministic and rule-driven (`skills/sdd/scripts/rules.json`).
-Either runner accepts the same CLI contract — one or more artifact paths, plus:
+## O resumo de 15 linhas
 
-- `--repo-root <path>` — root used to resolve cross-artifact `refs` (e.g. a
-  spec's `spec_ref` pointing at a real `spec` artifact). Defaults to `.`.
-- `--json` — emit findings as a JSON array instead of the human-readable report.
+O maior problema de um documento de 300 linhas é que o humano valida a
+**forma** antes de ter entendido o **conteúdo** — e quem ainda está
+descobrindo do que o documento trata passa batido justamente pela parte que
+precisava do julgamento dele.
 
-Exit code `0` means no blockers were found (there may still be `review`
-findings). Exit code `1` means at least one `blocker` finding was found.
-Every finding carries a `severity` of either `blocker` (fails the gate, exit 1)
-or `review` (informational only, does not affect the exit code).
+Antes de escrever qualquer artefato, a skill oferece um resumo curto:
 
-The first (and so far only) rule to emit `review` is `catalog_coverage_prompt`
-on `test-catalog` artifacts: it reports acceptance/edge-case ids (`AC-NN`,
-`EC-NN`) from the referenced spec that have no test case in section 2 and are
-not listed in section 3 Deliberate Gaps (`CATALOG_COVERAGE_GAP`), as a nudge
-without failing the gate.
+```
+─────────────────────────────────────────────────────────
+Do que se trata
+  Hoje o pedido é cancelado quando um dos pagantes não
+  cobre a parte dele. Queremos que o grupo feche mesmo assim.
 
-Python runner:
+O que vai fazer
+  • O organizador divide o valor entre até 5 pessoas, por %
+  • Cada pessoa paga a própria parte, no próprio meio
+  • Se alguém não pagar em 15 min, o pedido inteiro cai
+  • O organizador vê quem pagou e quem não pagou, em tempo real
 
-```bash
-python3 skills/sdd/scripts/sdd_lint.py <artifact.md> --repo-root .
+O que NÃO vai fazer
+  • Ninguém além do organizador pode mudar a divisão
+  • Divisão por item (só por porcentagem, nesta versão)
+
+Em aberto
+  Nada.
+─────────────────────────────────────────────────────────
 ```
 
-Node runner (same behavior, no Python dependency):
+Três regras que fazem isso funcionar:
 
-```bash
-node skills/sdd/scripts/sdd_lint.mjs <artifact.md> --repo-root .
+1. **Nunca automático.** A skill pergunta antes, ou lê sua preferência.
+2. **Nunca passa pelo portão.** O resumo não é lintado e não vai para o juiz
+   — **você é o único validador dele**.
+3. **Nunca vira arquivo.** É uma checagem de conversa, não um artefato.
+
+Para não responder a mesma pergunta toda vez:
+
+```yaml
+# .specs/sdd.config.yml
+summary_preview: ask   # always | never | ask
 ```
 
-Example, against a fixture with a deliberately missing `author` key:
+---
+
+## O portão de qualidade, em dois níveis
+
+```mermaid
+flowchart TD
+    A["Artefato escrito"] --> T1["Tier 1 — linter determinístico<br/>frontmatter, seções, placeholders,<br/>refs cruzadas, DAG acíclico"]
+    T1 -->|"blocker"| FIX1["Conserta o erro mecânico"]
+    FIX1 --> T1
+    T1 -->|"limpo"| T2["Tier 2 — juiz semântico<br/>subagente independente<br/>rubrica de 100 pontos"]
+
+    T2 -->|"FAIL — abaixo de 90"| TRIAGE["Lista de deficiências específicas<br/>com a correção exata"]
+    TRIAGE --> FIX2["Corrige só o que foi apontado"]
+    FIX2 --> T2NEW["Juiz NOVO, sem memória<br/>da rodada anterior"]
+    T2NEW --> T2
+
+    T2 -->|"PASS ≥ 90"| REC["Grava nota + notas no bloco<br/><code>validation:</code> do frontmatter"]
+    REC --> NEXT["Próxima etapa"]
+
+    style T1 fill:#2f3f4a,stroke:#7aa8c0,color:#fff
+    style T2 fill:#3f2f4a,stroke:#a87ac0,color:#fff
+    style REC fill:#2f4a35,stroke:#7ac08a,color:#fff
+    style TRIAGE fill:#4a2f2f,stroke:#c07a7a,color:#fff
+```
+
+**O juiz é sempre um estranho.** Quem escreveu o artefato não pode
+corrigi-lo: já sabe o que *quis dizer*, e lê a própria frase vaga como
+suficiente. O Tier 2 roda obrigatoriamente como subagente separado, que
+recebe apenas o texto do artefato e a rubrica — nunca a conversa que o
+gerou.
+
+**A nota fica no arquivo, não no chat:**
+
+```yaml
+validation:
+  - tier1: pass
+  - tier1_at: 2026-08-27
+  - tier2_score: 94
+  - tier2_verdict: PASS
+  - tier2_at: 2026-08-27
+  - tier2_rounds: 2
+  - notes: "Rodada 1 tirou 82 - o EC-04 era o caminho feliz disfarçado.
+            Reescrito como limite de submissão concorrente."
+```
+
+Isso não é burocracia: na hora de implementar, a skill **lê esse bloco em
+vez de rodar o portão de novo**. Você não paga duas vezes pela mesma
+validação.
+
+---
+
+## Quando algo quebra
+
+A via de troubleshooting é rápida de propósito — e tem uma lei só:
+
+> **Nenhum conserto é escrito antes de você ver qual é o conserto e escolher
+> a via.**
+
+```mermaid
+flowchart TD
+    A["Bug reportado"] --> B["1. Entende a causa raiz<br/><i>reproduz, rastreia, uma hipótese por vez</i>"]
+    B --> C{"2. Classifica o defeito"}
+
+    C -->|"O código discorda<br/>de uma spec correta"| D1["Defeito de código"]
+    C -->|"A instrução é que<br/>estava errada ou faltando"| D2["Defeito de artefato"]
+    C -->|"A área não tem<br/>spec nenhuma"| D3["Área sem governança"]
+
+    D1 --> P["3. PROPÕE e PARA<br/>causa · conserto · raio de impacto ·<br/>classificação · ids afetados"]
+    D2 --> P
+    D3 --> P
+
+    P --> Q{"Você escolhe"}
+    Q -->|"A"| VA["Conserto direto<br/>+ teste de regressão"]
+    Q -->|"B"| VB["Fast-track<br/>+ spec viva atualizada"]
+    Q -->|"C"| VC["Ciclo completo<br/>a partir da spec"]
+
+    style P fill:#4a422f,stroke:#c0b07a,color:#fff
+    style Q fill:#4a2f2f,stroke:#c07a7a,color:#fff
+```
+
+Mesmo quando você diz "só conserta" — isso escolhe a via A, e **não** é
+permissão para pular o teste de regressão nem para reescrever uma regra de
+negócio de passagem.
+
+---
+
+## Exemplos de uso
+
+### 1. Feature nova, do zero
+
+```
+Você: quero deixar o pessoal dividir a conta de um pedido em grupo
+```
+
+O que acontece:
+
+1. **Desafio antes de concordar.** "Antes de aceitar: o problema é o
+   pagamento dividido, ou é o pedido ser cancelado quando alguém não paga?"
+2. **discovery.md** — problema, alternativas descartadas, riscos aceitos,
+   ledger de perguntas em aberto (que precisa fechar antes de seguir).
+3. **Resumo de 15 linhas** → você aprova ou corrige.
+4. **spec.md** — `BR-01..NN`, `AC-01..NN` em Gherkin, casos de borda,
+   matriz de rastreabilidade. Nenhum nome de tecnologia, nenhuma rota HTTP.
+5. **Portão** → Tier 1 limpo, Tier 2 tirou 94/100, nota gravada no arquivo.
+6. **design.md** → contratos tipados, fluxos com falha parcial, timeouts com
+   número (nunca "um valor razoável").
+7. **test-catalog.md** → você assina os cenários que importam.
+8. **plan.md + tasks.md** → marcos entregáveis, DAG acíclico, papéis.
+9. **Execução** → um worktree por stream, um subagente novo por tarefa,
+   testes rodados de verdade antes de qualquer `[x]`.
+
+### 2. Mudança pequena numa feature já pronta
+
+```
+Você: aumenta a janela de configuração da divisão de 15 pra 20 minutos
+```
+
+A skill checa os três critérios de elegibilidade **contra o arquivo**, não
+de memória: 1 arquivo, ~6 linhas, mexe no limiar de um `EC` que já existe,
+nenhuma tabela/tópico/integração nova. Elegível.
+
+Resultado: código alterado, `EC-03` atualizado na spec viva, `updated_at`
+novo, linha no changelog explicando **por que** foi fast-track, Tier 1
+rodado, commit com tag `[fast-track]`.
+
+### 3. Bug
+
+```
+Você: tá deixando a soma das porcentagens passar de 100%
+```
+
+```
+Causa raiz    validateAllocation() usa <= quando a BR-02 diz < ;
+              soma de 100.5% passa
+Conserto      1 arquivo, 1 linha, + 1 teste de regressão
+Raio          só o caminho de submissão; nada mais chama essa função
+Classificação Defeito de código — a spec está certa, o código discorda
+Ids afetados  BR-02, AC-03
+
+Recomendo a via A (conserto direto). Mas a BR-02 é uma regra de
+dinheiro, então me diga: A, B (fast-track com nota na spec) ou C?
+```
+
+E aí ele **espera**.
+
+### 4. Sessão fria, retomando no meio
+
+```
+Você: continua de onde paramos
+```
+
+O estado mora no disco, não na memória da conversa. A skill relê
+`.specs/features/*/` e responde algo como: *"payment-split: spec e design
+ativos, catálogo assinado, plano no marco M2, 9/16 tarefas feitas, Task 2.4
+marcada `[/]` — vou checar se ela realmente começou antes de continuar."*
+
+---
+
+## Mapa dos artefatos
+
+Tudo de uma feature mora numa pasta só:
+
+```
+.specs/
+  sdd.config.yml                    # opcional: preferência do resumo curto
+  features/
+    payment-split/
+      discovery.md                  # fase 0: problema, desafio, ledger
+      spec.md                       # o quê e por quê — linguagem de negócio
+      design.md                     # como — contratos, fluxos, resiliência
+      test-catalog.md               # cenários assinados por um humano
+      plan.md                       # marcos, DAG, papéis    ← efêmero
+      tasks.md                      # checklist ao vivo      ← efêmero
+.adrs/
+  0002-client-supplied-idempotency-key-standard.md
+```
+
+**`plan.md` e `tasks.md` são efêmeros.** Eles descrevem como *uma* entrega
+foi sequenciada, não o que o sistema é. Quando o último marco fecha, a skill
+marca os dois como concluídos, resgata do log de bloqueios qualquer coisa
+que precise sobreviver, e **pergunta a você**: apagar (o git guarda) ou
+arquivar. Nunca faz sozinha, e nunca com tarefa `[REQUIRED]` em aberto.
+
+Pastas são criadas **só quando existe arquivo para colocar dentro**. Pasta
+vazia é uma mentira: diz que uma fase começou e foi abandonada, quando na
+verdade ela nunca foi alcançada.
+
+---
+
+## O linter, por fora da skill
+
+O Tier 1 é determinístico e dirigido por regras
+(`skills/sdd/scripts/rules.json`). Os dois runners aceitam o mesmo contrato
+de CLI — um ou mais caminhos de artefato, mais:
+
+- `--repo-root <path>` — raiz usada para resolver `refs` entre artefatos.
+  Padrão: `.`
+- `--json` — emite os achados como array JSON em vez do relatório legível.
+
+```bash
+python3 skills/sdd/scripts/sdd_lint.py <artefato.md> --repo-root .
+```
+
+```bash
+node skills/sdd/scripts/sdd_lint.mjs <artefato.md> --repo-root .
+```
+
+Saída `0` = nenhum blocker (ainda pode haver achados `review`). Saída `1` =
+pelo menos um blocker.
+
+Exemplo, contra uma fixture com `author` faltando de propósito:
 
 ```bash
 python3 skills/sdd/scripts/sdd_lint.py tests/fixtures/spec_missing_author/spec.md --repo-root tests/fixtures/spec_missing_author
@@ -93,46 +379,62 @@ spec.md
 1 blocker(s), 0 review item(s)
 ```
 
-This exits `1`. The `node skills/sdd/scripts/sdd_lint.mjs` equivalent produces
-the same finding and exit code.
+A única regra que emite `review` hoje é `catalog_coverage_prompt`: aponta
+ids `AC-NN`/`EC-NN` da spec sem caso de teste no catálogo e sem registro em
+"Deliberate Gaps" — um empurrãozinho, sem reprovar o portão.
 
-## Fast-track
+---
 
-A change is fast-track eligible only when all three hold:
+## Elegibilidade do fast-track
 
-1. It modifies an existing feature without introducing new domain invariants
-   or entities.
-2. It touches at most 3 files, or under 50 changed lines.
-3. It introduces no new tables, message topics, or third-party integrations.
+Só é elegível quando **os três** valem:
 
-Fast-track skips `plan.md` and `tasks.md` entirely. Instead, update the
-living spec directly and commit with a `[fast-track]` tag.
+1. Mexe numa feature existente sem introduzir invariante ou entidade nova.
+2. Toca no máximo 3 arquivos **e** menos de 50 linhas. (É **E**, não **ou** —
+   2 arquivos com 80 linhas não passa.)
+3. Não adiciona tabela, tópico de mensageria nem integração de terceiro.
 
-## Status
+O fast-track pula `plan.md` e `tasks.md`. Atualiza a spec viva direto,
+roda o Tier 1, e comita com a tag `[fast-track]`. Se bater a vontade de
+chamar o juiz do Tier 2 "só por segurança", isso é sinal de que a mudança
+**nunca foi fast-track** — refaça a classificação.
 
-Complete: the plugin skeleton (`.claude-plugin/plugin.json`,
-`.claude-plugin/marketplace.json`), the router (`skills/sdd/SKILL.md`), the
-rules file for all seven artifact types (`skills/sdd/scripts/rules.json`),
-both linter runners (`skills/sdd/scripts/sdd_lint.py`,
-`skills/sdd/scripts/sdd_lint.mjs`), and 18 fixture cases under
-`tests/fixtures/`, all passing on both runners via `tests/run_fixtures.py`.
+---
 
-Also built: all seven artifact templates and their authoring references
-(`skills/sdd/templates/`, `skills/sdd/references/`), a golden worked example
-under `tests/golden/payment-split/` that lints clean end to end, the
-Tier 2 quality-gate rubrics (`skills/sdd/references/quality-gate.md`) — four
-100-point rubrics, a fresh-subagent dispatch contract, and the triage loop,
-covering `spec.md`, `design.md`, `adr.md`, and the `plan.md`+`tasks.md` pair
-— and the execution engine (`references/execution.md`) and fast-track lane
-(`references/fast-track.md`). The router can now take a feature all the way
-from discovery through gated execution or, for a small change, straight
-down the fast-track lane.
+## O que a skill nunca faz
 
-The full lifecycle has been exercised end to end in scratch repos outside
-this plugin: a complete discovery-through-execution walkthrough using
-worktree-based execution, a session-resumption test (cold-start state
-detection mid-plan) that surfaced and led to fixing a real linter gap, and
-a fast-track eligibility/classification test. These were dry runs in
-throwaway repos, not an install inside a live Claude Code session via
-`/plugin` — that step still belongs to whoever installs it, per the Install
-section above.
+- Escrever `plan.md` antes de `spec.md` e `design.md` estarem `active`
+- Escolher modelo, limiar de cobertura ou estratégia de rollout no seu lugar
+- Revalidar um artefato na hora de implementar quando o bloco `validation:`
+  já registra um PASS e nada mudou
+- Lintar ou julgar o resumo de 15 linhas
+- Criar pasta antes de existir arquivo para pôr dentro
+- Marcar tarefa como `[x]` sem rodar o teste dela
+- Passar de um marco sem você assinar embaixo
+- Escrever um conserto antes de você ver a proposta e escolher a via
+- Editar um ADR já `accepted` — o certo é superseder
+
+---
+
+## Estado do projeto
+
+Completo e exercitado ponta a ponta: o esqueleto do plugin, o roteador
+(`skills/sdd/SKILL.md`), as regras para os sete tipos de artefato, os dois
+runners do linter, e 18 fixtures passando nos dois runners via
+`tests/run_fixtures.py`.
+
+Também prontos: os sete templates e suas referências de autoria, um exemplo
+completo em `tests/golden/payment-split/` que linta limpo de ponta a ponta,
+as quatro rubricas de 100 pontos do Tier 2 com o contrato de despacho do
+juiz independente e o loop de triagem, o motor de execução, a via de
+fast-track, a via de troubleshooting e o resumo curto de 15 linhas.
+
+O ciclo completo já foi rodado ponta a ponta em repositórios de teste fora
+deste plugin: uma passada de discovery até execução com worktrees, um teste
+de retomada de sessão fria no meio de um plano (que revelou e levou ao
+conserto de uma falha real do linter), e um teste de classificação de
+fast-track.
+
+## Licença
+
+MIT — veja [LICENSE](LICENSE).

@@ -9,6 +9,14 @@ status: accepted               # draft | proposed | accepted | rejected | deprec
 supersedes: null                # e.g. ADR-0001 — set when THIS ADR replaces an older one; null if it replaces nothing
 superseded_by: null             # e.g. ADR-0009 — set retroactively on this ADR once something replaces it; null while still current
 tags: [api-standards, resilience]   # optional; freeform labels for search/filtering
+validation:                    # written by the quality gate — see references/quality-gate.md
+  - tier1: pass
+  - tier1_at: 2026-08-18
+  - tier2_score: 96
+  - tier2_verdict: PASS
+  - tier2_at: 2026-08-18
+  - tier2_rounds: 1
+  - notes: "Passed first pass. Judge flagged §7 as the weakest section - the lint rule named there is real but unwritten, tracked as an accepted risk by the author."
 ---
 
 <!--

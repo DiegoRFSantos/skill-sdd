@@ -6,6 +6,14 @@ created_at: 2026-08-18 # YYYY-MM-DD, date this file was first created
 updated_at: 2026-08-18 # YYYY-MM-DD, date of the most recent edit
 author: Diego # e.g. Diego, or "Payments Team"
 status: resolved # draft while any ledger question is open (status column value: "open"); resolved only once every §5 row reads "resolved"
+validation:
+  - tier1: pass
+  - tier1_at: 2026-08-18
+  - tier2_score: n/a
+  - tier2_verdict: n/a
+  - tier2_at: n/a
+  - tier2_rounds: 0
+  - notes: "No Tier 2 rubric for discovery. Challenge pass run in-session; the ledger closed before status moved to resolved."
 ---
 
 <!--

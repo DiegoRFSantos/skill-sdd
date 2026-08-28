@@ -2,7 +2,7 @@
 
 ## Two tiers, and why this one runs second
 
-`SKILL.md` Step 3 runs the gate in two passes. **Tier 1** is
+`SKILL.md` Step 5 runs the gate in two passes. **Tier 1** is
 `sdd_lint.py`/`sdd_lint.mjs`: deterministic, rule-driven, cheap — frontmatter
 shape, required sections, forbidden patterns, cross-references that resolve,
 acyclic task DAGs, empty discovery ledgers, symmetric ADR supersede pointers,
@@ -18,6 +18,16 @@ prose quality of a document that's missing a required section or has a
 dangling `spec_ref` wastes a judge's attention on a document that's already
 known-broken by cheaper means — fix the mechanical failure, get to a clean
 Tier 1 pass, and only then spend a Tier 2 pass on it.
+
+## What the gate does not apply to
+
+The summary preview from `references/summary-preview.md` is not an artifact
+and is never gated — not Tier 1, not Tier 2, not "quickly, just to check."
+It has no frontmatter and no required sections, so Tier 1 has nothing to
+check; and a rubric written for a 300-line contract scores a 15-line sketch
+as catastrophically incomplete, which is true and useless. The human's
+approval of the preview is the entire gate for that step. The gate below
+applies to the full artifact the preview precedes.
 
 ## Why the judge must be a stranger to the work
 
@@ -188,6 +198,53 @@ Output format: one block per criterion (name, score/max, justification,
 deficiency + fix if below max), then the total, then the PASS/FAIL verdict
 line.
 ```
+
+## Recording the result in the artifact
+
+A score that exists only in a chat transcript is a score nobody can find
+again. Every gate run — both tiers — ends by writing its outcome into the
+artifact's own frontmatter, in a `validation:` block. This is not
+bookkeeping: `references/execution.md` reads this block instead of
+re-running the gate when implementation starts, so an artifact with no
+`validation:` block forces execution to stop and ask.
+
+Write it as a list of single-key pairs, the same YAML shape
+`allocated_agents` already uses — the Tier 1 parser handles that form, and
+handles nested mappings badly:
+
+```yaml
+validation:
+  - tier1: pass                # pass | fail | skipped
+  - tier1_at: 2026-08-27
+  - tier2_score: 94            # 0-100, or n/a for discovery.md and test-catalog.md
+  - tier2_verdict: PASS        # PASS | FAIL | n/a
+  - tier2_at: 2026-08-27
+  - tier2_rounds: 2            # how many judge dispatches it took to reach this verdict
+  - notes: "Round 1 scored 82 - EC-04 restated the happy path. Rewrote it as a concurrent-submission boundary; edge-case criterion went 6/15 to 14/15. Accepted risk: success metric SM-02 has no instrumentation yet, per the human."
+```
+
+Rules for the block:
+
+- **Every field, every time.** `tier1: skipped` is a legitimate value when
+  neither runtime was available — an omitted key is not, because a reader
+  cannot tell a skipped pass from a forgotten one.
+- **`notes` is where the judgment lives.** It names what the judge actually
+  caught and what changed in response, plus any gap the human accepted
+  rather than fixed (with their rationale, per the triage loop below). "All
+  criteria passed" is not a note; it is the score restated.
+- **`n/a` for the two unjudged types.** `discovery.md` and
+  `test-catalog.md` have no Tier 2 rubric, so they carry the Tier 1 fields
+  and `n/a` on the Tier 2 ones. They still get the block.
+- **A FAIL gets recorded too**, while the artifact is being fixed. The
+  block reflects the last run, not only the last happy run — an artifact
+  sitting at `tier2_verdict: FAIL` is exactly the signal the next phase
+  needs to refuse to start.
+- **Avoid angle brackets and the placeholder words** (`TODO`, `TBD`,
+  `etc.`) inside `notes` — Tier 1 scans frontmatter-adjacent text for them
+  and will block on your own note.
+- **A material edit invalidates the block.** Re-run both tiers and
+  overwrite it; do not leave a stale score describing text that no longer
+  exists.
 
 ## The triage loop
 

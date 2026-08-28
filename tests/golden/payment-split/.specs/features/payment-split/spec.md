@@ -9,6 +9,14 @@ version: 1.0.0               # SemVer; bump minor on new rules, major on breakin
 status: draft                # draft | in_review | active | deprecated
 dependencies:                # optional; ADRs that constrain this capability
   - ADR-0002                 # e.g. ADR-0002
+validation:
+  - tier1: pass
+  - tier1_at: 2026-08-18
+  - tier2_score: 94
+  - tier2_verdict: PASS
+  - tier2_at: 2026-08-18
+  - tier2_rounds: 2
+  - notes: "Round 1 scored 82 - EC-04 restated the happy path. Rewrote it as a concurrent-submission boundary; edge-case criterion went 6/15 to 14/15."
 ---
 
 <!--

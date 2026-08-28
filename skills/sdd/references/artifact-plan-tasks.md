@@ -1,5 +1,27 @@
 # Writing a Plan and Tasks Tracker
 
+## Where they live, and how long they live
+
+Both files go in the feature's own folder, beside the artifacts they
+execute:
+
+```
+.specs/features/<feature>/plan.md
+.specs/features/<feature>/tasks.md
+```
+
+There is no separate `.specs/plans/` tree. Create the folder only if it does
+not already exist — never scaffold it ahead of writing the file.
+
+Unlike `spec.md` and `design.md`, this pair is **ephemeral**. It describes
+how one delivery was sequenced, not what the system is, and once every
+milestone has shipped it answers a question nobody asks again. The disposal
+protocol — mark done, rescue anything durable out of the blocker log, then
+let the human choose delete or archive — is in `references/execution.md`
+under "Closing out the plan." Write the pair knowing it is temporary: a
+decision that needs to outlive the delivery belongs in `spec.md`,
+`design.md`, or an ADR, not in a milestone description.
+
 ## The five delivery principles
 
 **Vertical delivery slicing.** Every milestone in plan.md §1 must be a
