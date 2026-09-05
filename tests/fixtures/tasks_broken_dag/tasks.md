@@ -14,8 +14,8 @@ current_milestone: M1
 
 ## Milestone 1
 
-- [x] **Task 1.1** `[REQUIRED]` `[Agent: Coder]` `[depends_on: Task 1.3]` Create migration.
-- [ ] **Task 1.2** `[Agent: Coder]` `[depends_on: Task 9.9]` Implement service.
-- [ ] **Task 1.3** `[REQUIRED]` `[depends_on: Task 1.1]` Scaffold tests.
+- [x] **Task 1.1** `[REQUIRED]` `[Agent: Coder]` `[depends_on: Task 1.3]` `[files: db/migrations/001_split.sql]` Create migration.
+- [ ] **Task 1.2** `[Agent: Coder]` `[depends_on: Task 9.9]` `[files: src/payments/split_validator.py]` Implement service.
+- [ ] **Task 1.3** `[REQUIRED]` `[depends_on: Task 1.1]` `[files: tests/test_split_validator.py]` Scaffold tests.
 
 ## Execution Scratchpad & Blocker Log

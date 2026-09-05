@@ -30,6 +30,7 @@ Real usage over several days surfaced four defects and one gap:
 - Make every agent-to-human message shorter than the thing it describes.
 - Make an artifact reviewable in ~15 lines, with the full detail still present.
 - Start implementation on a clean context window.
+- Make the technical artifacts safe for a small model to execute without guessing.
 
 ## Non-goals
 
@@ -294,6 +295,43 @@ a refusal, and a small plan may not be worth a new session. `SKILL.md` Step 1's
 state detection already reconstructs everything a cold session needs from disk,
 so the handoff requires no new state-passing mechanism.
 
+## 5b. Written for a small executing model
+
+Execution dispatches each task to a **fresh subagent with no session memory**,
+and that subagent is often a small model — Haiku-class. A small model with no
+context does not fail loudly on a vague reference; it invents one. "The
+validation module" becomes a plausible path that does not exist, and "the
+relevant handler" becomes a function name nobody wrote.
+
+This does not conflict with §4. Shorter *prose* and more precise *structure*
+are the same change: the tokens freed by deleting rationale paragraphs are
+spent on literal paths and symbol names, which are dense and unambiguous where
+narrative is neither.
+
+Four concrete requirements:
+
+1. **`design.md` gains a required `## 9. File Map`** — a table of every file
+   the feature touches: repo-relative path, what it holds, and whether it is
+   new or modified. Paths are literal. A path that does not exist yet is still
+   written out in full, because the task that creates it needs to be told
+   exactly where.
+2. **Every contract names its symbol.** A contract in `design.md` states the
+   exact function, class, or type name and its signature — not a description of
+   what the thing does. An executing model should never have to choose a name.
+3. **Every task line carries a `[files: ...]` tag**, linted as a blocker
+   exactly like `[Agent: ...]` and `[REQUIRED]`. The tag lists the literal
+   repo-relative paths that task is allowed to touch. This bounds the blast
+   radius of a small model as much as it guides it.
+4. **The dispatch prompt carries both verbatim.** `references/execution.md`
+   already sends the task's own slice of `design.md`/`spec.md`; it now also
+   sends the task's file list and the named symbols, so the subagent never has
+   to search the repo to find out where it is meant to write.
+
+The authoring rule stated in `references/artifact-design.md` and
+`references/artifact-plan-tasks.md`: **never refer to a file or a symbol by
+description.** Not "the split service" — `src/payments/split_validator.py`.
+Not "the validation function" — `validate_split(payment, allocations)`.
+
 ## 6. Deferred: live progress dashboard
 
 Designed, not built in this pass. Recorded so the decision is not re-litigated.
@@ -336,8 +374,8 @@ narrating progress in chat, which is §3, not from the dashboard itself.
 | `skills/sdd/references/execution.md` | reads `judge_depth`; cold-session entry point |
 | `skills/sdd/templates/*.md` | worked examples removed; tables throughout; `## 0. At a Glance` added to `spec.md` and `design.md` only |
 | `skills/sdd/references/examples/payment-split/` | new — the extracted worked examples |
-| `skills/sdd/scripts/rules.json` | `## 0. At a Glance` section; `max_lines` budgets |
-| `skills/sdd/scripts/sdd_lint.py` | `max_lines` check, `review` severity; At a Glance 15-line check |
+| `skills/sdd/scripts/rules.json` | `## 0. At a Glance` and `## 9. File Map` sections; `max_lines` budgets |
+| `skills/sdd/scripts/sdd_lint.py` | `max_lines` check, `review` severity; At a Glance 15-line check; `[files: ...]` task tag |
 | `skills/sdd/scripts/sdd_lint.mjs` | same, kept at parity |
 
 ## Testing

@@ -1,8 +1,1 @@
-[
-  { "file": "tasks.md", "rule_id": "REF_UNRESOLVED", "severity": "blocker", "line": 1, "message": "plan_ref 'PLAN-FEAT-001' does not resolve to an existing plan artifact" },
-  { "file": "tasks.md", "rule_id": "TASKS_CYCLE", "severity": "blocker", "line": 1, "message": "dependency cycle detected: Task 1.1 -> Task 1.3 -> Task 1.1" },
-  { "file": "tasks.md", "rule_id": "TASKS_MISSING_AGENT", "severity": "blocker", "line": 19, "message": "Task 1.3 is missing an [Agent: ...] tag" },
-  { "file": "tasks.md", "rule_id": "TASKS_MISSING_CRITICALITY", "severity": "blocker", "line": 18, "message": "Task 1.2 is missing a [REQUIRED] or [OPTIONAL] tag" },
-  { "file": "tasks.md", "rule_id": "TASKS_PROGRESS_MISMATCH", "severity": "blocker", "line": 1, "message": "progress says 1/2 but the checklist has 1 completed of 3 tasks" },
-  { "file": "tasks.md", "rule_id": "TASKS_UNKNOWN_DEP", "severity": "blocker", "line": 18, "message": "Task 1.2 depends_on 'Task 9.9' which does not exist" }
-]
+[{"file": "tasks.md", "rule_id": "REF_UNRESOLVED", "severity": "blocker", "line": 1, "message": "plan_ref 'PLAN-FEAT-001' does not resolve to an existing plan artifact"}, {"file": "tasks.md", "rule_id": "TASKS_CYCLE", "severity": "blocker", "line": 1, "message": "dependency cycle detected: Task 1.1 -> Task 1.3 -> Task 1.1"}, {"file": "tasks.md", "rule_id": "TASKS_MISSING_AGENT", "severity": "blocker", "line": 19, "message": "Task 1.3 is missing an [Agent: ...] tag"}, {"file": "tasks.md", "rule_id": "TASKS_MISSING_CRITICALITY", "severity": "blocker", "line": 18, "message": "Task 1.2 is missing a [REQUIRED] or [OPTIONAL] tag"}, {"file": "tasks.md", "rule_id": "TASKS_PROGRESS_MISMATCH", "severity": "blocker", "line": 1, "message": "progress says 1/2 but the checklist has 1 completed of 3 tasks"}, {"file": "tasks.md", "rule_id": "TASKS_UNKNOWN_DEP", "severity": "blocker", "line": 18, "message": "Task 1.2 depends_on 'Task 9.9' which does not exist"}]

@@ -10,6 +10,7 @@ const NOT_APPLICABLE = /^\s*_Not applicable:.+_\s*$/;
 const TASK_LINE = /^- \[( |x|\/|!)\] \*\*(Task [\w.]+)\*\*(.*)$/;
 const AGENT_TAG = /\[Agent:\s*[^\]]+\]/;
 const CRITICALITY_TAG = /\[(REQUIRED|OPTIONAL)\]/;
+const FILES_TAG = /\[files:\s*([^\]]+)\]/;
 const DEPENDS_TAG = /\[depends_on:\s*([^\]]+)\]/;
 
 function scalar(value) {
@@ -141,7 +142,41 @@ function parseTasks(text) {
   return parsed;
 }
 
+// A spec declares its ids either as a `### BR-01` heading or, since the
+// table-first templates, as the first cell of a table row: `| BR-01 | ... |`.
+// Both forms are authoritative; a catalog referencing an id must find it either
+// way, or a table-first spec looks to the linter like it declares nothing.
 const SPEC_ID_HEADING = /^### ((?:BR|AC|EC)-\d+)/gm;
+const SPEC_ID_ROW = /^\|\s*((?:BR|AC|EC)-\d+)\s*\|/gm;
+
+function specIds(specText) {
+  return new Set([
+    ...[...specText.matchAll(SPEC_ID_HEADING)].map((m) => m[1]),
+    ...[...specText.matchAll(SPEC_ID_ROW)].map((m) => m[1]),
+  ]);
+}
+
+const GLANCE_HEADING = "## 0. At a Glance";
+const GLANCE_MAX_LINES = 15;
+
+// Content lines of the At a Glance section: blanks and HTML comments don't count.
+function glanceBody(text) {
+  const lines = text.split("\n");
+  const start = lines.findIndex((l) => l.trim() === GLANCE_HEADING);
+  if (start === -1) return null;
+  const body = [];
+  let inComment = false;
+  for (const line of lines.slice(start + 1)) {
+    if (line.startsWith("## ")) break;
+    if (inComment) {
+      if (line.includes("-->")) inComment = false;
+      continue;
+    }
+    if (line.includes("<!--")) { inComment = !line.includes("-->"); continue; }
+    if (line.trim()) body.push(line);
+  }
+  return body;
+}
 
 const NAMED_CHECKS = {
   tasks_tags(name, text, fm, out, repoRoot) {
@@ -150,6 +185,12 @@ const NAMED_CHECKS = {
         out.push(finding(name, "TASKS_MISSING_AGENT", `${task.id} is missing an [Agent: ...] tag`, task.line));
       if (!CRITICALITY_TAG.test(task.rest))
         out.push(finding(name, "TASKS_MISSING_CRITICALITY", `${task.id} is missing a [REQUIRED] or [OPTIONAL] tag`, task.line));
+      const filesTag = FILES_TAG.exec(task.rest);
+      if (filesTag === null)
+        out.push(finding(name, "TASKS_MISSING_FILES",
+          `${task.id} is missing a [files: ...] tag; a fresh subagent cannot infer which paths it may touch`, task.line));
+      else if (!filesTag[1].trim())
+        out.push(finding(name, "TASKS_EMPTY_FILES", `${task.id} has an empty [files: ...] tag`, task.line));
     }
   },
   tasks_progress(name, text, fm, out, repoRoot) {
@@ -214,7 +255,7 @@ const NAMED_CHECKS = {
     if (!specRef) return;
     const specText = findArtifactText(repoRoot, specRef, "spec");
     if (specText === null) return;
-    const validIds = new Set([...specText.matchAll(SPEC_ID_HEADING)].map((m) => m[1]));
+    const validIds = specIds(specText);
     for (const row of parseMdTable(text, "## 2. Test Cases")) {
       const cells = row.cells;
       if (cells.length < 2) continue;
@@ -232,11 +273,9 @@ const NAMED_CHECKS = {
     if (!specRef) return;
     const specText = findArtifactText(repoRoot, specRef, "spec");
     if (!specText) return;
-    const acEcIds = [...new Set(
-      [...specText.matchAll(SPEC_ID_HEADING)]
-        .map((m) => m[1])
-        .filter((id) => id.startsWith("AC-") || id.startsWith("EC-"))
-    )].sort();
+    const acEcIds = [...specIds(specText)]
+      .filter((id) => id.startsWith("AC-") || id.startsWith("EC-"))
+      .sort();
     const covered = new Set();
     for (const row of parseMdTable(text, "## 2. Test Cases")) {
       const cells = row.cells;
@@ -270,6 +309,16 @@ const NAMED_CHECKS = {
     }
     out.push(finding(name, "PLAN_COVERAGE_UNDECLARED", message));
   },
+  glance_length(name, text, fm, out) {
+    const body = glanceBody(text);
+    if (body === null) return;
+    if (body.length > GLANCE_MAX_LINES)
+      out.push(finding(name, "GLANCE_TOO_LONG",
+        `'${GLANCE_HEADING}' is ${body.length} content lines; the cap is ${GLANCE_MAX_LINES}`));
+    else if (body.length === 0)
+      out.push(finding(name, "GLANCE_EMPTY", `'${GLANCE_HEADING}' has no content`));
+  },
+
   adr_supersede_symmetry(name, text, fm, out, repoRoot) {
     const selfId = fm.id;
 
@@ -366,6 +415,17 @@ function lintFile(path, repoRoot) {
       if (new RegExp(rule.regex).test(line))
         out.push(finding(name, rule.id, rule.message, i + 1));
   });
+
+  // Non-blocking: an artifact over its budget is allowed, but visibly so. A
+  // genuinely large feature may need the room; what is not allowed is drifting
+  // past the budget without anyone noticing.
+  if (spec.max_lines) {
+    const count = text.replace(/\n+$/, "").split("\n").length;
+    if (count > spec.max_lines)
+      out.push(finding(name, "LINE_BUDGET",
+        `${count} lines against a budget of ${spec.max_lines}; trim, or say why it needs the room`,
+        1, "review"));
+  }
 
   for (const checkName of spec.checks ?? []) NAMED_CHECKS[checkName]?.(name, text, fm, out, repoRoot);
   return out;

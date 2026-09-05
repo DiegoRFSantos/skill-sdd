@@ -215,6 +215,7 @@ ROOT_AWARE_CHECKS = [check_frontmatter_refs]
 TASK_LINE = re.compile(r"^- \[( |x|/|!)\] \*\*(Task [\w.]+)\*\*(.*)$", re.ASCII)
 AGENT_TAG = re.compile(r"\[Agent:\s*[^\]]+\]", re.ASCII)
 CRITICALITY_TAG = re.compile(r"\[(REQUIRED|OPTIONAL)\]", re.ASCII)
+FILES_TAG = re.compile(r"\[files:\s*([^\]]+)\]")
 DEPENDS_TAG = re.compile(r"\[depends_on:\s*([^\]]+)\]", re.ASCII)
 
 
@@ -246,6 +247,16 @@ def check_tasks_tags(path, text, fm, findings, repo_root):
         if not CRITICALITY_TAG.search(task["rest"]):
             findings.append(finding(path.name, "TASKS_MISSING_CRITICALITY",
                                     "%s is missing a [REQUIRED] or [OPTIONAL] tag" % task["id"],
+                                    line=task["line"]))
+        files_tag = FILES_TAG.search(task["rest"])
+        if files_tag is None:
+            findings.append(finding(path.name, "TASKS_MISSING_FILES",
+                                    "%s is missing a [files: ...] tag; a fresh subagent "
+                                    "cannot infer which paths it may touch" % task["id"],
+                                    line=task["line"]))
+        elif not files_tag.group(1).strip():
+            findings.append(finding(path.name, "TASKS_EMPTY_FILES",
+                                    "%s has an empty [files: ...] tag" % task["id"],
                                     line=task["line"]))
 
 
@@ -312,7 +323,16 @@ def check_discovery_ledger(path, text, fm, findings, repo_root):
                                     % row_id, line=row["line"]))
 
 
+# A spec declares its ids either as a `### BR-01` heading or, since the
+# table-first templates, as the first cell of a table row: `| BR-01 | ... |`.
+# Both forms are authoritative; a catalog referencing an id must find it either
+# way, or a table-first spec looks to the linter like it declares nothing.
 SPEC_ID_HEADING = re.compile(r"^### ((?:BR|AC|EC)-\d+)", re.MULTILINE | re.ASCII)
+SPEC_ID_ROW = re.compile(r"^\|\s*((?:BR|AC|EC)-\d+)\s*\|", re.MULTILINE | re.ASCII)
+
+
+def _spec_ids(spec_text):
+    return set(SPEC_ID_HEADING.findall(spec_text)) | set(SPEC_ID_ROW.findall(spec_text))
 
 
 def check_catalog_non_empty(path, text, fm, findings, repo_root):
@@ -329,7 +349,7 @@ def check_catalog_ids_resolve(path, text, fm, findings, repo_root):
     spec_text = _find_artifact_text(repo_root, spec_ref, "spec")
     if spec_text is None:
         return
-    valid_ids = set(SPEC_ID_HEADING.findall(spec_text))
+    valid_ids = _spec_ids(spec_text)
     for row in parse_md_table(text, "## 2. Test Cases"):
         cells = row["cells"]
         if len(cells) < 2:
@@ -351,7 +371,7 @@ def check_catalog_coverage_prompt(path, text, fm, findings, repo_root):
     if not spec_text:
         return
     ac_ec_ids = sorted(
-        set(i for i in SPEC_ID_HEADING.findall(spec_text) if i.startswith("AC-") or i.startswith("EC-"))
+        set(i for i in _spec_ids(spec_text) if i.startswith("AC-") or i.startswith("EC-"))
     )
     covered = set()
     for row in parse_md_table(text, "## 2. Test Cases"):
@@ -372,6 +392,48 @@ def check_catalog_coverage_prompt(path, text, fm, findings, repo_root):
             findings.append(finding(path.name, "CATALOG_COVERAGE_GAP",
                                     "acceptance/edge-case id '%s' has no test case in section 2 and is not listed in section 3 Deliberate Gaps"
                                     % spec_id, line=1, severity="review"))
+
+
+GLANCE_HEADING = "## 0. At a Glance"
+GLANCE_MAX_LINES = 15
+
+
+def _glance_body(text):
+    """Content lines of the At a Glance section: blanks and HTML comments don't count."""
+    lines = text.split("\n")
+    try:
+        start = next(i for i, l in enumerate(lines) if l.strip() == GLANCE_HEADING)
+    except StopIteration:
+        return None
+    body = []
+    in_comment = False
+    for line in lines[start + 1:]:
+        if line.startswith("## "):
+            break
+        if in_comment:
+            if "-->" in line:
+                in_comment = False
+            continue
+        if "<!--" in line:
+            in_comment = "-->" not in line
+            continue
+        if line.strip():
+            body.append(line)
+    return body
+
+
+def check_glance_length(path, text, fm, findings, repo_root):
+    """The At a Glance section is the persisted 15-line preview; the cap is hard."""
+    body = _glance_body(text)
+    if body is None:
+        return
+    if len(body) > GLANCE_MAX_LINES:
+        findings.append(finding(path.name, "GLANCE_TOO_LONG",
+                                "'%s' is %d content lines; the cap is %d"
+                                % (GLANCE_HEADING, len(body), GLANCE_MAX_LINES)))
+    elif not body:
+        findings.append(finding(path.name, "GLANCE_EMPTY",
+                                "'%s' has no content" % GLANCE_HEADING))
 
 
 def check_adr_supersede_symmetry(path, text, fm, findings, repo_root):
@@ -430,8 +492,26 @@ NAMED_CHECKS = {
     "catalog_ids_resolve": check_catalog_ids_resolve,
     "catalog_coverage_prompt": check_catalog_coverage_prompt,
     "adr_supersede_symmetry": check_adr_supersede_symmetry,
+    "glance_length": check_glance_length,
     "plan_coverage_threshold_declared": check_plan_coverage_threshold,
 }
+
+
+def check_line_budget(path, text, spec, findings):
+    """Non-blocking: an artifact over its budget is allowed, but visibly so.
+
+    A genuinely large feature may need the room. What is not allowed is
+    drifting past the budget without anyone noticing, which is how a 500-line
+    spec for a small change happens.
+    """
+    budget = spec.get("max_lines")
+    if not budget:
+        return
+    count = len(text.rstrip("\n").split("\n"))
+    if count > budget:
+        findings.append(finding(path.name, "LINE_BUDGET",
+                                "%d lines against a budget of %d; trim, or say why it needs the room"
+                                % (count, budget), severity="review"))
 
 
 def lint_file(path, rules, repo_root):
@@ -453,6 +533,7 @@ def lint_file(path, rules, repo_root):
         check(path, fm, spec, findings, repo_root)
     check_sections(path, text, spec, findings)
     check_body_patterns(path, text, spec, rules, findings)
+    check_line_budget(path, text, spec, findings)
     for name in spec.get("checks", []):
         handler = NAMED_CHECKS.get(name)
         if handler is not None:

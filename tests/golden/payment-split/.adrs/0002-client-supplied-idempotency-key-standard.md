@@ -19,132 +19,77 @@ validation:
   - notes: "Passed on the first dispatch. The lint rule named in Compliance Verification is not yet written; accepted as a known gap by the author."
 ---
 
-<!--
-This is the technical constitution. It captures one macro, cross-cutting
-architectural decision — the kind that would matter to a feature that hasn't
-been imagined yet (a message broker choice, an auth protocol, a concurrency
-strategy) — never a single feature's schema or endpoint contract. Once this
-file's status is `accepted`, it is immutable: a changed decision gets a NEW
-ADR whose `supersedes` field points back at this ADR's id, not an edit to
-this file.
-
-This worked example picks a deliberately neutral, illustrative decision — a
-shared Idempotency-Key standard for write APIs — so the template reads as a
-structural example rather than a real architectural commitment this plugin
-makes on the adopter's behalf. Replace the example content with your own
-decision; keep the headings exactly as they are — this file is linted
-against skills/sdd/scripts/rules.json and the section headings must match
-verbatim.
-
-Illustrative superseding pair (not this file's own values — shown only to
-demonstrate the fields above):
-  New ADR-0009 (the replacement):  supersedes: ADR-0002
-  This ADR-0002 (once replaced):   status: superseded, superseded_by: ADR-0009
--->
-
 ## 1. Status
 
 **Accepted** — set 2026-08-18.
 
 ## 2. Context & Problem Statement
 
-Every service in the platform exposes write APIs (operations that create or
-mutate state). Clients and gateways retry on timeouts and transient network
-failures as a matter of course, and each retry resubmits the same logical
-write. Today, whether a retried write is safe to resubmit is decided
-independently by each service team: some already dedupe on an ad hoc header,
-some rely on client-side "don't double-click" UI guards that don't survive a
-gateway-level retry, and some do nothing, so a retried request can create a
-second record or apply a side effect twice. Support has traced duplicate
-records and duplicate downstream side effects directly to this gap. Without
-a single, enforceable standard, every new write endpoint reopens the same
-question, and reviewers have no fixed rule to check code against.
+Clients and gateways retry write operations on timeout as a matter of course,
+and each retry resubmits the same logical write. Whether that is safe is
+currently decided per service team: some dedupe on an ad hoc header, some rely
+on client-side guards that do not survive a gateway-level retry, and some do
+nothing, so a retry can create a second record. Support has traced duplicate
+records directly to this gap. Without one enforceable standard, every new write
+endpoint reopens the question and reviewers have no fixed rule to check.
 
 ## 3. Decision Drivers
 
-- Retries happen above the application layer (client, proxy, gateway) and
-  cannot be eliminated — the standard must make retries safe, not rarer.
-- The contract must be uniform across services so a client integrating with
-  service A already knows how to integrate safely with service B.
-- The mechanism must work over plain HTTP request/response, without
-  introducing a new broker, queue, or out-of-band coordination system.
-- Coding and reviewing agents must be able to check compliance from the
-  endpoint definition alone, without inspecting runtime behavior.
-- The standard must degrade safely: a client that omits the mechanism
-  should get a clear rejection, never silent double-processing.
+| Driver | Why it constrains the choice |
+|---|---|
+| Retries happen above the application layer | The standard must make retries safe, not rarer — it cannot assume they stop |
+| One contract across services | A client integrating with service A should already know how to integrate safely with service B |
+| Plain HTTP request/response only | No new broker, queue, or out-of-band coordination |
+| Mechanically checkable | An agent must verify compliance from the endpoint definition alone, without observing runtime behavior |
+| Safe degradation | A client omitting the mechanism gets a clear rejection, never silent double-processing |
 
 ## 4. Considered Options
 
-- **Option A — Client-supplied Idempotency Key header.** The client
-  generates a unique key per logical write attempt and sends it on every
-  retry of that same attempt; the server stores the key alongside the
-  resulting response for a fixed window and replays that response for a
-  repeated key instead of reprocessing.
-- **Option B — Server-side request-body hashing.** The server computes a
-  hash of the normalized request body and treats two writes with the same
-  hash within a time window as duplicates, without requiring any new client
-  field.
-- **Option C — No platform standard; leave deduplication to each service.**
-  Continue letting each team decide independently whether and how to
-  deduplicate retried writes.
+| Option | Mechanism | Honest case for it |
+|---|---|---|
+| A: Client-supplied `Idempotency-Key` | Client generates a unique key per logical attempt; server stores key-to-response for a fixed window and replays on repeat | Distinguishes "retry of this attempt" from "a new, identical request" — the only option that can |
+| B: Server-side body hashing | Server hashes the normalized body and treats repeats within a window as duplicates | Requires nothing of the client; deployable without touching a single integration |
+| C: No platform standard | Each service decides independently | Zero coordination cost, and teams closest to a domain may know its retry semantics best |
 
 ## 5. Decision Outcome
 
-**Chosen: Option A — Client-supplied Idempotency Key header.** Body hashing
-(Option B) was rejected because two legitimately different writes can share
-an identical body (e.g. two separate "add one unit" calls), so a hash cannot
-distinguish "retry of the same attempt" from "a new, coincidentally
-identical request" — it would silently drop valid writes. Leaving the
-decision unstandardized (Option C) was rejected because it is the status
-quo that produced the duplicate-record incidents driving this decision, and
-it gives coding/reviewing agents no fixed rule to enforce.
+**Chosen: Option A.**
 
-**Architectural Rules & Invariants:**
+Option B was rejected because two legitimately different writes can carry an
+identical body — two separate "add one unit" calls are indistinguishable by
+hash — so it would silently drop valid writes. Option C was rejected because it
+is the status quo that produced the duplicate-record incidents driving this
+decision, and it leaves reviewing agents with no fixed rule to check.
 
-- Every external-facing write endpoint (an operation that creates or
-  mutates state) MUST accept a client-supplied `Idempotency-Key` header,
-  a UUID v4 string.
-- A request missing `Idempotency-Key` on an endpoint this rule covers MUST
-  be rejected before any side effect executes.
-- The server MUST persist the mapping of `Idempotency-Key` to the resulting
-  response for at least 24 hours from first use.
-- A repeated request carrying a previously-seen `Idempotency-Key` within
-  that window MUST return the original stored response and MUST NOT
-  re-execute the underlying side effect.
-- Read-only operations are out of scope for this rule; only writes require
-  the header.
+**Architectural rules:**
+
+- Every external-facing write endpoint MUST accept a client-supplied `Idempotency-Key` header, a UUID v4 string.
+- A covered request missing the header MUST be rejected before any side effect executes.
+- The server MUST persist key-to-response for at least 24 hours from first use.
+- A repeat within that window MUST return the stored response and MUST NOT re-execute the side effect.
+- Read-only operations are out of scope.
 
 ## 6. Consequences & Trade-Offs
 
 ### Positive Consequences
 
-- Retried writes become safe by construction; clients no longer need
-  service-specific knowledge of how to avoid double-submission.
-- Coding and reviewing agents can check compliance mechanically: does the
-  endpoint definition accept and enforce `Idempotency-Key`, yes or no.
-- Incident diagnosis simplifies — a duplicate side effect now points to a
-  single, known mechanism to inspect rather than N different ad hoc ones.
+- Retried writes are safe by construction; clients need no service-specific knowledge.
+- Compliance is mechanically checkable: does the endpoint accept and enforce the header, yes or no.
+- A duplicate side effect now points at one known mechanism to inspect instead of several ad hoc ones.
 
 ### Negative Consequences / Risks
 
-- Every write endpoint now carries additional storage cost and latency for
-  the key-to-response lookup, proportional to the 24-hour retention window.
-- Clients that fail to generate a genuinely unique key per attempt (e.g.
-  reusing one key across unrelated writes) will have later, legitimately
-  distinct writes rejected or incorrectly deduplicated — this pushes a
-  correctness burden onto every client implementation.
-- Existing endpoints built before this decision need a migration to add
-  `Idempotency-Key` support, and until they do, they remain non-compliant.
+- Every write endpoint carries storage cost and lookup latency proportional to the 24-hour window.
+- A client that reuses a key across unrelated writes gets legitimate writes deduplicated away — this pushes a correctness burden onto every client implementation.
+- Endpoints built before this decision are non-compliant until migrated.
 
 ## 7. Compliance Verification
 
-**Agent Rule.** A coding agent MUST reject any new or modified
-external-facing write endpoint definition that does not accept and enforce
-an `Idempotency-Key` header per §5, and MUST flag any `design.md` that
-defines such an endpoint without listing `ADR-0002` in its frontmatter
-`dependencies`.
+**Agent rule.** A coding agent MUST reject any new or modified external-facing
+write endpoint that does not accept and enforce `Idempotency-Key` per §5, and
+MUST flag any `design.md` defining such an endpoint without `ADR-0002` in its
+frontmatter `dependencies`.
 
-**Validation Rule.** CI MUST run a contract test per write endpoint that
-sends the same request twice with the same `Idempotency-Key` and asserts
-the second response is byte-identical to the first and that the underlying
-side effect (e.g. row count, downstream event count) occurred exactly once.
+**Validation rule.** CI MUST run a contract test per write endpoint that sends
+the same request twice with the same key and asserts the second response is
+byte-identical to the first and that the side effect occurred exactly once.

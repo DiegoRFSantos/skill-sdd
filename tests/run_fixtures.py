@@ -1,5 +1,10 @@
 #!/usr/bin/env python3
-"""Run every fixture through both linter runners and assert identical, expected output."""
+"""Run every fixture through both linter runners and assert identical, expected output.
+
+Then assert the shipped templates and the golden worked example lint clean —
+they are what the skill tells an agent to copy, so a template that no longer
+passes its own linter teaches the wrong shape.
+"""
 import json
 import subprocess
 import sys
@@ -53,12 +58,42 @@ def main():
         if len(values) > 1 and any(v != values[0] for v in values):
             failures.append("%s: RUNNER DRIFT — python and node disagree" % case.name)
 
+    failures.extend(_check_clean(available))
+
     print("ran %d fixture(s) against runners: %s" % (len(cases), ", ".join(sorted(available))))
     if failures:
         print("\nFAILURES:\n" + "\n".join(failures))
         return 1
     print("all fixtures pass")
     return 0
+
+
+CLEAN_TARGETS = [
+    ("templates", ROOT / "skills/sdd/templates", ROOT / "skills/sdd/templates"),
+    ("golden spec", ROOT / "tests/golden/payment-split/.specs/features/payment-split",
+     ROOT / "tests/golden/payment-split"),
+    ("golden adrs", ROOT / "tests/golden/payment-split/.adrs",
+     ROOT / "tests/golden/payment-split"),
+]
+
+
+def _check_clean(available):
+    """Templates and the golden example must carry zero blockers, in both runners."""
+    problems = []
+    for label, directory, repo_root in CLEAN_TARGETS:
+        for artifact in sorted(directory.glob("*.md")):
+            for name, cmd in available.items():
+                proc = subprocess.run(
+                    cmd + [str(artifact), "--json", "--repo-root", str(repo_root)],
+                    capture_output=True, text=True,
+                )
+                blockers = [f for f in json.loads(proc.stdout or "[]")
+                            if f["severity"] == "blocker"]
+                if blockers:
+                    problems.append("%s: %s [%s] must lint clean but has %d blocker(s):\n  %s"
+                                    % (label, artifact.name, name, len(blockers),
+                                       json.dumps(blockers)))
+    return problems
 
 
 def _has_node():

@@ -4,20 +4,10 @@ type: spec
 feature: payment-split
 created_at: 2026-08-18
 updated_at: 2026-08-18
+author: Diego
 version: 1.0.0
 status: draft
 ---
-
-## 0. At a Glance
-
-An organizer divides one order's cost across several recipients by percentage.
-The split is checked before the order is placed, and a split whose shares add
-up to more than the whole is refused with a reason the organizer can act on.
-
-Not covered: more than one currency, repeating splits, recipients proposing
-their own share.
-
-Nothing open.
 
 ## 1. Context & Purpose
 ## 2. Ubiquitous Language

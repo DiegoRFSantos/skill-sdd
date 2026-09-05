@@ -10,6 +10,16 @@ version: 1.0.0
 status: draft
 ---
 
+## 0. At a Glance
+
+A validation service checks a proposed split before anything is written to the
+ledger, and returns the specific reason when it refuses one. Retries carry a
+caller-supplied key so a repeated submission settles once.
+
+Not covered: currency conversion, scheduled splits.
+
+Nothing open.
+
 ## 1. Architecture & Components
 
 A single service handles widget creation requests.
@@ -47,7 +57,13 @@ No ADRs apply to this fixture.
 | BR-01 | Contracts section |
 | EC-01 | Resilience & Security section |
 
-## 9. Change Log
+## 9. File Map
+
+| Path | Holds | Status |
+|---|---|---|
+| `src/payments/split_validator.py` | validation rules | new |
+
+## 10. Change Log
 
 | Version | Date | Change |
 |---|---|---|

@@ -1,0 +1,1 @@
+[{"file": "spec.md", "rule_id": "GLANCE_TOO_LONG", "severity": "blocker", "line": 1, "message": "'## 0. At a Glance' is 16 content lines; the cap is 15"}]
