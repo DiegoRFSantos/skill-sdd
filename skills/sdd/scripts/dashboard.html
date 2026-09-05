@@ -76,11 +76,28 @@
          background: var(--done); margin-right: 6px; vertical-align: middle; }
   .stale .dot { background: var(--block); }
   footer { margin-top: 26px; color: var(--muted); font-size: 12px; }
+
+  .num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .cost td, .cost th { font-size: 13px; }
+  .cost tr.now td { font-weight: 600; }
+  .note { color: var(--muted); font-size: 12px; margin-top: 10px; }
+  .stack { display: flex; height: 8px; border-radius: 4px; overflow: hidden;
+           margin-top: 4px; background: var(--chip); }
+  .stack > i { display: block; height: 100%; }
+  .k-read { background: var(--accent); }
+  .k-write { background: var(--run); }
+  .k-out { background: var(--block); }
+  .legend { font-size: 12px; color: var(--muted); margin-top: 6px; }
+  .legend b { font-weight: 600; }
+  .legend .sw { display: inline-block; width: 8px; height: 8px; border-radius: 2px;
+                margin: 0 4px 0 12px; vertical-align: middle; }
+  .legend .sw:first-child { margin-left: 0; }
 </style>
 </head>
 <body>
 <h1 id="repo">SDD Progress</h1>
-<div class="sub"><span class="dot"></span><span id="tick">connecting…</span></div>
+<div class="sub"><span class="dot"></span><span id="tick">connecting…</span>
+  <span id="live" style="margin-left:12px"></span></div>
 <main id="out"></main>
 <footer>Derived from disk — <code>tasks.md</code> marks, frontmatter, and each artifact's
 <code>validation:</code> block. Nothing here is reported by the agent.</footer>
@@ -166,6 +183,47 @@ function renderFeature(f) {
       </ul></div>` : ""}`;
 }
 
+const fmt = (n) => n >= 1e6 ? (n / 1e6).toFixed(1) + "M"
+                 : n >= 1e3 ? Math.round(n / 1e3) + "k" : String(n);
+
+function renderUsage(usage) {
+  if (!usage || !usage.length) return "";
+  const rows = usage.map((s, i) => `<tr class="${i === 0 ? "now" : ""}">
+      <td><code>${esc(s.session)}</code>${i === 0 ? " &middot; latest" : ""}</td>
+      <td class="num">${s.turns}</td>
+      <td class="num">${fmt(s.avg_context)}</td>
+      <td class="num">${fmt(s.cache_read)}</td>
+      <td class="num">${fmt(s.cache_write + s.input)}</td>
+      <td class="num">${fmt(s.output)}</td>
+    </tr>`).join("");
+  const s0 = usage[0];
+  const total = s0.cache_read + s0.cache_write + s0.input + s0.output || 1;
+  const pct = (n) => (100 * n / total).toFixed(1) + "%";
+  return `<h2>Token usage</h2>
+    <div class="panel scroll">
+      <table class="cost">
+        <thead><tr><th>Session</th><th class="num">Turns</th><th class="num">Avg context</th>
+          <th class="num">Cache read</th><th class="num">Fresh in</th><th class="num">Out</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+      <div class="stack">
+        <i class="k-read" style="width:${pct(s0.cache_read)}"></i>
+        <i class="k-write" style="width:${pct(s0.cache_write + s0.input)}"></i>
+        <i class="k-out" style="width:${pct(s0.output)}"></i>
+      </div>
+      <div class="legend">
+        <span class="sw k-read"></span>cache read ${pct(s0.cache_read)}
+        <span class="sw k-write"></span>fresh input ${pct(s0.cache_write + s0.input)}
+        <span class="sw k-out"></span>output ${pct(s0.output)}
+      </div>
+      <p class="note">Cost tracks <b>turns &times; context</b>: everything in context is
+        re-read every turn, so ${fmt(s0.avg_context)} &times; ${s0.turns} turns is where
+        the cache-read total comes from. Cache reads bill at a fraction of fresh input;
+        output is the priciest per token. Read from this project's local transcripts —
+        no agent tokens involved.</p>
+    </div>`;
+}
+
 function render(data) {
   document.getElementById("repo").textContent = `SDD Progress — ${data.repo}`;
   const out = data.features.length
@@ -179,7 +237,10 @@ function render(data) {
     ? `<h2>In flight</h2><div class="panel"><ul class="events">` + data.events.slice(-12).map((e) =>
         `<li><code>${esc(e.at ?? "")}</code> ${esc(e.event ?? JSON.stringify(e))}</li>`).join("") +
       `</ul></div>` : "";
-  document.getElementById("out").innerHTML = out + adrs + events;
+  document.getElementById("out").innerHTML = out + adrs + events + renderUsage(data.usage);
+  const lc = data.last_change;
+  document.getElementById("live").textContent = lc
+    ? `last change ${lc.seconds_ago}s ago — ${lc.file}` : "";
 }
 
 // Re-render only when the state actually changed. Rebuilding the DOM on every

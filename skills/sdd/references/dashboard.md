@@ -78,3 +78,41 @@ Rules:
 
 Add `.specs/.events.jsonl` to `.gitignore` — it is session noise, not a record
 of the system.
+
+## Liveness costs nothing now
+
+The page shows "last change 12s ago — spec.md", read from file mtimes. A
+running session writes files; nothing written for a long time means finished or
+stuck, and either way that is what you want to see. This replaced the event
+ping as the default liveness signal because it costs the agent nothing.
+
+Event pings are now **optional and off by default**. Write one only when naming
+what is happening is genuinely worth ~20 tokens — a judge dispatch that will run
+for minutes is the case that qualifies. Most sessions should write none.
+
+## The token usage panel
+
+The dashboard reads this project's Claude Code transcripts from
+`~/.claude/projects/<encoded-repo-path>/*.jsonl` and shows, per session: turns,
+average context, cache reads, fresh input, and output. **This costs zero agent
+tokens** — those files are written by the harness whether or not anything reads
+them.
+
+What the panel is for is one relationship:
+
+> **cost ≈ turns × context size**
+
+Everything in context is re-read on every subsequent turn. A 2,400-token
+artifact that enters context at turn 50 of a 330-turn session is not a
+2,400-token cost — it is 2,400 × 280 in cache reads. This is why the artifact
+budgets, the section extractor, and the fresh-session handoff matter more than
+their file sizes suggest, and why an artifact read late is cheaper than the same
+artifact read early.
+
+Cache reads bill at a fraction of fresh input, so they are shown separately
+rather than summed into one misleading number. Output is the priciest per token,
+which is what the terse judge output contract in `references/quality-gate.md`
+exists to cut.
+
+If the panel is empty, this repo has no transcripts under `~/.claude/projects/`
+yet — nothing is broken.

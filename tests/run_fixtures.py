@@ -60,6 +60,7 @@ def main():
 
     failures.extend(_check_clean(available))
     failures.extend(_check_status())
+    failures.extend(_check_extract())
 
     print("ran %d fixture(s) against runners: %s" % (len(cases), ", ".join(sorted(available))))
     if failures:
@@ -139,6 +140,61 @@ def _check_status():
                         % first["description"])
     if not data["adrs"]:
         problems.append("status: the golden ADR should be listed")
+    return problems
+
+
+def _check_extract():
+    """sdd_extract.py must return a real slice, and fail loudly on a miss.
+
+    A silent empty result is the dangerous failure here: it reads to an agent
+    like "that section is empty" rather than "you asked for the wrong thing."
+    """
+    script = ROOT / "skills/sdd/scripts/sdd_extract.py"
+    design = ROOT / "tests/golden/payment-split/.specs/features/payment-split/design.md"
+    spec = ROOT / "tests/golden/payment-split/.specs/features/payment-split/spec.md"
+    if not script.exists():
+        return ["sdd_extract.py is missing"]
+
+    def run(target, *flags):
+        return subprocess.run([sys.executable, str(script), str(target)] + list(flags),
+                              capture_output=True, text=True)
+
+    problems = []
+    whole = len(design.read_text())
+
+    got = run(design, "--section", "3.1")
+    if got.returncode != 0:
+        problems.append("extract: --section 3.1 failed: %s" % got.stderr.strip())
+    elif "3.1 API Contracts" not in got.stdout:
+        problems.append("extract: --section 3.1 did not return that section")
+    elif len(got.stdout) > whole // 4:
+        problems.append("extract: --section 3.1 returned %d of %d chars; it is not slicing"
+                        % (len(got.stdout), whole))
+
+    got = run(design, "--section", "3")
+    if got.returncode != 0 or got.stdout.count("### ") < 4:
+        problems.append("extract: --section 3 must include its subsections")
+
+    got = run(spec, "--ids", "BR-01,EC-02")
+    if got.returncode != 0:
+        problems.append("extract: --ids failed: %s" % got.stderr.strip())
+    else:
+        if "BR-01" not in got.stdout or "EC-02" not in got.stdout:
+            problems.append("extract: --ids did not return both rows")
+        if got.stdout.count("|---") < 2:
+            problems.append("extract: --ids must carry each table's header row")
+        if "BR-02" in got.stdout:
+            problems.append("extract: --ids returned a row that was not asked for")
+
+    got = run(design, "--outline")
+    if got.returncode != 0 or "9 File Map" not in got.stdout:
+        problems.append("extract: --outline did not list the headings")
+
+    # A miss must fail loudly, never return an empty string with exit 0.
+    for flags in (("--section", "99"), ("--ids", "BR-99")):
+        got = run(design, *flags)
+        if got.returncode == 0:
+            problems.append("extract: %s should exit non-zero on a miss" % (flags,))
     return problems
 
 

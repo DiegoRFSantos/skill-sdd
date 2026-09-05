@@ -96,7 +96,20 @@ four things and nothing else:
    searches for it.
 3. The exact slice of `design.md` and/or `spec.md` the task implements — the
    section, contract, or BR/AC/EC ids the task line cites, not the whole
-   document — **including the named symbols and signatures verbatim.**
+   document — **including the named symbols and signatures verbatim.** Give the
+   subagent the extractor command rather than pasting the slice, so the text
+   lands in its disposable context instead of the orchestrating one:
+
+   ```bash
+   python3 ${CLAUDE_PLUGIN_ROOT}/skills/sdd/scripts/sdd_extract.py \
+     .specs/features/<feature>/design.md --section 3.1
+   python3 ${CLAUDE_PLUGIN_ROOT}/skills/sdd/scripts/sdd_extract.py \
+     .specs/features/<feature>/spec.md --ids BR-01,AC-02
+   ```
+
+   Never `cat` the whole artifact for this. A section is a fraction of the file,
+   and — because context is re-read on every later turn — that fraction keeps
+   paying for the rest of the session.
 4. How its work will be verified.
 
 When the dashboard is on, append one event line per dispatch

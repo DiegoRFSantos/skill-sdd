@@ -52,12 +52,17 @@ make case by case:
 - Tier 2 MUST be dispatched via the `Agent` tool as a genuinely separate
   subagent — never scored inline by the agent that wrote or edited the
   artifact, and never scored by re-reading the authoring conversation.
-- The judge receives **only**: the raw content of the artifact under review,
-  plus the raw content of any artifact its rubric requires as context (a
-  `design.md` review needs the `spec.md` it implements; an ADR review may
-  need nothing beyond itself). Paste file content into the dispatch prompt —
-  do not hand the judge a file path and let it read the artifact through a
-  session that remembers how the artifact came to be.
+- The judge receives **only**: the artifact under review, plus any artifact its
+  rubric requires as context (a `design.md` review needs the `spec.md` it
+  implements; an ADR review may need nothing beyond itself).
+- **Hand the judge the file paths and let it read them itself.** Do not read the
+  artifacts into the orchestrating context in order to paste them into the
+  prompt. A fresh subagent opening a file has seen nothing but that file — it is
+  exactly as isolated as pasted text, and it keeps several thousand tokens out
+  of the orchestrating context, where everything is re-read on every remaining
+  turn of the session. What this rule forbids is the *orchestrator* scoring from
+  a context that remembers writing the artifact; a subagent with no history and
+  a path is not that.
 - The judge never receives the discovery transcript, prior chat turns, or
   any framing beyond the rubric and the artifact text itself. If the judge
   can infer what the author intended beyond what's on the page, the score is
@@ -254,12 +259,15 @@ Artifact type: {artifact_type}
 Rubric (100 points total, pass threshold 90/100):
 {rubric}
 
-Artifact content:
-{artifact_content}
+Artifact to score: {artifact_path}
+Read it now. It is your only source of truth about this artifact.
 
-Referenced artifact content (context only — do not score this directly,
-use it to check the primary artifact's claims and traceability):
-{referenced_artifact_content}
+Referenced artifact (context only — do not score it, use it to check the
+primary artifact's claims and traceability): {referenced_artifact_path}
+
+Read only these files. Do not open anything else in the repository, do not
+look at git history, and do not go looking for how either file came to be
+written — what is in them is the whole of what you are judging.
 
 Instructions:
 
@@ -370,6 +378,13 @@ Rules for the block:
 - **A material edit invalidates the block.** Re-run both tiers and
   overwrite it; do not leave a stale score describing text that no longer
   exists.
+
+## After the block is written, offer the reset
+
+The artifact is now durable and the authoring context is not needed to write
+the next one. Offer `/clear` (or `/compact` mid-phase) in one line, per
+`references/context-economy.md`, then stop. Once per boundary; if the human
+declines, carry on without mentioning it again.
 
 ## The triage loop
 

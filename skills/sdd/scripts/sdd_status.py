@@ -19,6 +19,7 @@ Serving is needed because fetch() from a file:// page is blocked by CORS.
 import argparse
 import json
 import sys
+import time
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from pathlib import Path
 
@@ -140,7 +141,12 @@ def _blocker_log(text):
 
 
 def _events(repo_root, limit=40):
-    """The agent's in-flight pings. Absent, malformed, or empty is normal."""
+    """Optional in-flight pings. Absent, malformed, or empty is normal and expected.
+
+    Liveness does not depend on these — see _last_change. They exist only for a
+    session that wants to name what it is doing, and cost the agent tokens, so
+    the default is to write none.
+    """
     path = repo_root / ".specs" / ".events.jsonl"
     if not path.exists():
         return []
@@ -154,6 +160,76 @@ def _events(repo_root, limit=40):
         except ValueError:
             out.append({"event": line})
     return out
+
+
+def _last_change(repo_root):
+    """Seconds since any artifact was touched — liveness, for zero agent tokens.
+
+    A running session writes files. Nothing written for a long time means either
+    finished or stuck, and either way that is what you want to see. This replaces
+    the event ping as the default liveness signal, because it costs nothing.
+    """
+    newest = None
+    for base in (repo_root / ".specs", repo_root / ".adrs"):
+        if not base.is_dir():
+            continue
+        for path in base.rglob("*.md"):
+            try:
+                stamp = path.stat().st_mtime
+            except OSError:
+                continue
+            if newest is None or stamp > newest[0]:
+                newest = (stamp, str(path.relative_to(repo_root)))
+    if newest is None:
+        return None
+    return {"seconds_ago": max(0, int(time.time() - newest[0])), "file": newest[1]}
+
+
+def _usage(project_dir, limit_sessions=8):
+    """Real token usage, read from the transcripts the harness already writes.
+
+    Costs zero agent tokens: these files exist whether or not anything reads
+    them. Cache reads are billed at a fraction of fresh input, so they are
+    reported separately rather than summed into one misleading total.
+    """
+    if project_dir is None or not project_dir.is_dir():
+        return None
+    sessions = []
+    for path in sorted(project_dir.glob("*.jsonl"), key=lambda p: p.stat().st_mtime,
+                       reverse=True)[:limit_sessions]:
+        totals = {"input": 0, "cache_write": 0, "cache_read": 0, "output": 0, "turns": 0}
+        try:
+            handle = path.open(encoding="utf-8")
+        except OSError:
+            continue
+        with handle:
+            for line in handle:
+                try:
+                    record = json.loads(line)
+                except ValueError:
+                    continue
+                if record.get("type") != "assistant":
+                    continue
+                use = (record.get("message") or {}).get("usage") or {}
+                totals["turns"] += 1
+                totals["input"] += use.get("input_tokens", 0)
+                totals["cache_write"] += use.get("cache_creation_input_tokens", 0)
+                totals["cache_read"] += use.get("cache_read_input_tokens", 0)
+                totals["output"] += use.get("output_tokens", 0)
+        if not totals["turns"]:
+            continue
+        totals["session"] = path.stem[:8]
+        totals["at"] = int(path.stat().st_mtime)
+        totals["avg_context"] = (totals["cache_read"] + totals["cache_write"]) // totals["turns"]
+        sessions.append(totals)
+    return sessions or None
+
+
+def _project_dir(repo_root):
+    """Claude Code's transcript directory for this repo, or None if not found."""
+    encoded = str(repo_root).replace("/", "-")
+    candidate = Path.home() / ".claude" / "projects" / encoded
+    return candidate if candidate.is_dir() else None
 
 
 def collect(repo_root):
@@ -173,7 +249,9 @@ def collect(repo_root):
             adrs.append({"file": path.name, "id": read[1].get("id"),
                          "status": read[1].get("status")})
     return {"repo": repo_root.name, "features": features, "adrs": adrs,
-            "events": _events(repo_root)}
+            "events": _events(repo_root),
+            "last_change": _last_change(repo_root),
+            "usage": _usage(_project_dir(repo_root))}
 
 
 class Handler(BaseHTTPRequestHandler):

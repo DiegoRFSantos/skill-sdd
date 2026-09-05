@@ -198,6 +198,43 @@ inútil.
 
 ---
 
+## FinOps — onde o token realmente vai
+
+Medido numa sessão real desta skill: **330 turnos x ~206k de contexto = 66,5
+milhões de tokens de cache read, 98,8% de tudo que foi cobrado.** Entrada nova:
+0,7%. Saída: 0,4%.
+
+A regra que explica quase tudo:
+
+> **custo ≈ turnos x tamanho do contexto**
+
+Tudo que está no contexto é relido a cada turno seguinte. Ou seja: **ler um
+arquivo não é um custo único.** Um artefato de 2.400 tokens que entra no
+contexto no turno 50 de uma sessão de 330 custa 2.400 x 280 ≈ 672 mil tokens de
+cache read.
+
+O que sai disso, em ordem de impacto:
+
+1. **Nunca leia um arquivo que você vai passar pra um subagente.** O contexto do
+   subagente é descartável, o seu não. Passe o caminho. É por isso que o juiz do
+   Tier 2 agora recebe o path do artefato, e não o texto colado.
+2. **Extraia, não dê `cat`.** `sdd_extract.py design.md --section 3.1` devolve
+   485 caracteres contra os 7.048 do arquivo — 14x menos, e essa economia se
+   repete a cada turno.
+3. **`/clear` depois de cada artefato aprovado.** Tudo que importa já está no
+   arquivo. Reconstruir custa ~6 mil tokens; carregar o contexto da entrevista
+   adiante custa 100k+ por turno.
+4. **Menos turnos.** Turnos são o outro multiplicador.
+
+O que **não** funciona: comprimir artefato (o agente precisa expandir pra ler,
+então o texto inteiro entra no contexto do mesmo jeito) e encurtar o que você
+escreve (tudo que você digitou numa sessão inteira deu 3.389 tokens — 0,005% do
+total; um mal-entendido custa sessenta vezes isso).
+
+Detalhes e as medições em `references/context-economy.md`.
+
+---
+
 ## Atualizando da 1.x para a 2.0 — mudança quebrando
 
 A 2.0 adiciona três exigências que **reprovam artefatos escritos na 1.x**:

@@ -57,6 +57,21 @@ binding as the invariants above.
 Terseness applies to your messages, not to the artifacts — and never to a
 question that zero inference requires you to ask.
 
+## Context economy — read before reading anything large
+
+**Cost is turns times context size.** Everything in context is re-read on every
+later turn, so a file read is never a one-time cost. Three rules cover most of
+it; `references/context-economy.md` has the rest and the measurements.
+
+- **Never read a file you are about to hand to a subagent.** Give it the path,
+  or the `sdd_extract.py` command. Its context is disposable; yours is not.
+- **Extract, do not `cat`.** `sdd_extract.py <file> --outline` to find the
+  section, `--section N.N` or `--ids BR-01,AC-02` to take only it.
+- **Grep before you read.** State detection in Step 1 never reads an artifact.
+- **Offer a context reset after every gated artifact.** `/clear` at a phase
+  boundary, `/compact` mid-phase. You cannot run either — offer once, in one
+  line, and accept the answer.
+
 ## Configuration
 
 Four optional keys, all in `.specs/sdd.config.yml`, all documented in
@@ -212,5 +227,8 @@ either way.
 - Create a directory before there is a file to put in it.
 - Mark a task `[x]` without running its tests.
 - Continue past a milestone gate without human sign-off.
+- Read an artifact into your own context in order to paste it to a subagent —
+  hand over the path or the `sdd_extract.py` command instead.
+- Re-offer a context reset the human already declined for this phase.
 - Write a troubleshooting fix before the user has seen the proposal and picked a lane.
 - Edit an ADR that is already `accepted` — supersede it instead.
