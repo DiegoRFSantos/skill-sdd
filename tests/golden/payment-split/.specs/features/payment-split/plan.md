@@ -31,6 +31,8 @@ validation:
   - tier2_verdict: PASS
   - tier2_at: 2026-08-18
   - tier2_rounds: 2
+  - judge_model: sonnet
+  - judge_depth: fast
   - notes: "Round 1 scored 84 - M2 was a technical-layer slice, not independently shippable. Re-cut M2 around the recipient-notification path; milestone criterion went 11/20 to 19/20."
 ---
 

@@ -30,6 +30,33 @@ from an approved specification.
    in the artifact's `validation:` frontmatter block; execution reads it
    instead of re-running it.
 
+## How to talk while doing this
+
+Every message costs the human attention and the session context. These are as
+binding as the invariants above.
+
+- **State report: one line.** `payment-split: spec active (94 PASS), design draft.`
+- **Gate PASS: one line.** `spec.md — Tier 1 pass, Tier 2 94 PASS (1 round).`
+- **Gate FAIL: that line, then the deficiencies as bullets.** Nothing else. No
+  reassurance, no plan for what you will do about it — the triage loop already
+  says what happens next.
+- **Never restate an artifact you just wrote.** `## 0. At a Glance` is its
+  summary; link the file and stop.
+- **Never narrate the process.** Not "now I'll move to the design phase," not
+  "let me read the reference for that," not an explanation of what SDD is. Do
+  the thing.
+- **Never explain a rule of this skill unless asked.** Applying it is the
+  explanation.
+- **Questions: batch the independent ones, numbered, no preamble.** Do not
+  restate a question in prose before asking it, and do not pad the options with
+  reassurance about there being no wrong answer.
+- **Say the thing that is actually true**, including when it is inconvenient: a
+  skipped Tier 1, a fast-lane gate, an assumption you had to make. Brevity is
+  never a reason to leave out a caveat that changes what the human would do.
+
+Terseness applies to your messages, not to the artifacts — and never to a
+question that zero inference requires you to ask.
+
 ## Step 1 — Detect state before doing anything
 
 State lives on disk, not in memory. A cold session reconstructs it:
@@ -91,22 +118,24 @@ ships an unreviewed invariant.
 | Any artifact drafted | `references/quality-gate.md` | score report + sign-off |
 | Tasks gated, ready to build | `references/execution.md` | working code |
 
-## Step 4 — Offer the summary preview before writing
+## Step 4 — The 15-line summary, written once
 
-Long artifacts are validated badly when the human's first look at the
-feature is a 300-line document. Before authoring `discovery.md`, `spec.md`,
-`design.md`, an ADR, `test-catalog.md`, or the `plan.md`+`tasks.md` pair,
-resolve the preference and — unless it says `never` — show a 15-line
-plain-language sketch first.
+Artifacts are validated badly when the human's first look at a feature is a
+200-line document. One 15-line plain-language sketch fixes that, and it is used
+in two places: shown in chat before the artifact is written, and persisted as
+the artifact's `## 0. At a Glance` section.
+
+The **section** is required in `spec.md` and `design.md`, linted, cap enforced.
+The **chat preview** is a preference:
 
 ```bash
 grep '^summary_preview:' .specs/sdd.config.yml 2>/dev/null
 ```
 
 No file, or the value is `ask` → ask the user for this artifact. Read
-`references/summary-preview.md` for the format, the 15-line cap, and the
-rule that **the preview is never linted and never judged** — the human is
-its only validator.
+`references/summary-preview.md` for the format and the rule that **neither
+the preview nor `## 0. At a Glance` is ever judged** — Tier 1 checks the
+section's cap, and the human is the only validator of its content.
 
 ## Step 5 — Gate every artifact before moving on
 
@@ -125,11 +154,33 @@ node ${CLAUDE_PLUGIN_ROOT}/skills/sdd/scripts/sdd_lint.mjs <artifact> --repo-roo
 If neither runtime exists, walk the Tier 1 checklist in `references/quality-gate.md`
 manually **and state explicitly that the deterministic pass was skipped**.
 
+Tier 2 needs two answers before it can dispatch — which model the judge runs
+on, and whether the gate runs `fast` or `full`:
+
+```bash
+grep '^judge_model:\|^judge_depth:' .specs/sdd.config.yml 2>/dev/null
+```
+
+Missing either one, ask the human once, both in the same message, and offer to
+save the answers. Never guess a judge model: unset, the judge inherits the
+orchestrating session's model — usually the slowest available — which is the
+single biggest reason a gate feels slow.
+
 Then run Tier 2 and the triage loop per `references/quality-gate.md`, and
 write the outcome into the artifact's `validation:` frontmatter block —
-score, verdict, date, and the notes. An artifact that passed a gate without
+score, verdict, date, judge model and depth, and the notes. An artifact that passed a gate without
 recording it has not finished the gate: the next phase reads that block
 instead of re-running the judge.
+
+## Step 6 — Hand off before executing
+
+A gated `tasks.md` is the end of this session's job, not the start of the next
+phase in it. The session that ran discovery, the interview and the gate rounds
+is carrying a context window implementation does not need, and every task
+dispatch inherits that weight. Print the handoff command from
+`references/artifact-plan-tasks.md`, offer to continue here in one line, and
+let the human choose. Everything execution needs is on disk, so nothing is lost
+either way.
 
 ## Never do these
 
@@ -137,7 +188,13 @@ instead of re-running the judge.
 - Pick a model, a coverage threshold, or a rollout strategy on the user's behalf.
 - Re-gate an artifact at implementation time when its `validation:` block
   already records a PASS and nothing has changed since — read the block.
-- Lint or dispatch a Tier 2 judge on a summary preview.
+- Lint or dispatch a Tier 2 judge on a summary preview or on `## 0. At a Glance`.
+- Dispatch more than one judge per artifact per round, or judge two artifacts
+  at once.
+- Pick a judge model, or a `fast`/`full` depth, without asking.
+- Write a task line without a `[files: ...]` tag, or refer to a file or symbol
+  by description when the design names it literally.
+- Ship a mermaid diagram over its node cap — drop it instead.
 - Create a directory before there is a file to put in it.
 - Mark a task `[x]` without running its tests.
 - Continue past a milestone gate without human sign-off.

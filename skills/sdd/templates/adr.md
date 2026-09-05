@@ -16,6 +16,8 @@ validation:                    # written by the quality gate — see references/
   - tier2_verdict: PASS
   - tier2_at: 2026-08-18
   - tier2_rounds: 1
+  - judge_model: sonnet
+  - judge_depth: fast
   - notes: "Passed first pass. Judge flagged §7 as the weakest section - the lint rule named there is real but unwritten, tracked as an accepted risk by the author."
 ---
 
@@ -33,8 +35,7 @@ on the adopter's behalf. Replace the content; keep the headings verbatim, they
 are linted against skills/sdd/scripts/rules.json.
 
 Budget 120 lines. Superseding pair, illustrative only:
-  New ADR-0009:            supersedes: ADR-0002
-  This ADR-0002, replaced: status: superseded, superseded_by: ADR-0009
+  New ADR-0009: supersedes: ADR-0002 | This ADR-0002, replaced: status: superseded, superseded_by: ADR-0009
 -->
 
 ## 1. Status

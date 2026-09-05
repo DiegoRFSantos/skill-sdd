@@ -87,3 +87,25 @@ Catch these before an ADR moves to `accepted`:
 - Does it contain mutable instructions meant to be edited sprint over
   sprint? An ADR is a point-in-time record, not a living runbook — anything
   that needs periodic editing doesn't belong in an accepted ADR.
+
+
+## Written to pass
+
+- **The problem is genuinely cross-cutting.** It would matter to a feature
+  nobody has imagined yet. One feature's schema or endpoint choice is a design
+  decision, not an ADR.
+- **Every considered option states the honest case for it** — the argument a
+  competent engineer would actually make. An option written so it obviously
+  loses is a straw man and scores zero, however many options sit in the table.
+  If you cannot make the case for an alternative, you have not understood it
+  well enough to reject it.
+- **The outcome follows from the drivers.** A reader should be able to trace
+  the choice back to the listed drivers without taking anything on faith.
+- **The negative consequences are real costs**, not softened upsides. An
+  all-positive consequences section scores zero on that criterion.
+- **Compliance verification is concretely checkable** — a lint rule, a code
+  pattern, a CI contract test. "Reviewers will watch for it" is not a check.
+
+Optional single diagram: a `gitGraph` for a branching or release strategy, or
+a `C4Context`/`architecture-beta` for a structural decision. Caps and the
+beta-syntax caveat are the same as in `references/artifact-design.md`.

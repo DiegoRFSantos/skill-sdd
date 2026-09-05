@@ -142,7 +142,7 @@
    "checks": [
     "discovery_ledger_empty_when_resolved"
    ],
-   "max_lines": 150
+   "max_lines": 170
   },
   "design": {
    "frontmatter": {

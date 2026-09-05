@@ -175,8 +175,15 @@ authoring reference points to the example for an agent that needs to see a
 filled-in one. Expected: `templates/design.md` 399 → ~120 lines,
 `templates/spec.md` 282 → ~90.
 
-The golden fixture under `tests/golden/payment-split/` stays exactly as it is —
-it is the regression baseline for the linter and must not move.
+**Deviation from this design, taken during implementation:** the golden fixture
+under `tests/golden/payment-split/` was *not* left as it was, and no separate
+`references/examples/` directory was created. The golden artifacts were the same
+content as the templates' inline examples, so a separate examples directory
+would have been a third copy of the same document guaranteed to rot. Instead the
+golden artifacts were regenerated from the new slim templates and the authoring
+references cite them as the worked example. They ship with the plugin
+(`marketplace.json` sources the whole repo) and the test runner now asserts they
+lint clean, so the example cannot go stale without a test failing.
 
 ### 4.2 Tables instead of prose blocks
 
@@ -263,11 +270,16 @@ not fail the run. A `max_lines` key per artifact type in `rules.json` emits a
 |---|---|
 | spec.md | 200 |
 | design.md | 250 |
-| discovery.md | 150 |
+| discovery.md | 170 |
 | adr.md | 120 |
 | test-catalog.md | 120 |
 | plan.md | 150 |
 | tasks.md | 120 |
+
+These numbers were estimates and one was wrong: discovery.md was set at 150 and
+raised to 170 during implementation, because a filled seven-section worksheet
+plus its ledger does not fit in 150 and the template could not pass its own
+budget without losing content that earns its place.
 
 Non-blocking on purpose: a genuinely large feature is allowed to exceed the
 budget, it just has to be a visible decision. Implemented in both

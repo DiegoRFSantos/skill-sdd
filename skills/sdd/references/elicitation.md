@@ -114,3 +114,28 @@ Every unknown becomes a `Q-NN` entry instead — logged in `discovery.md`'s
 ledger during Phase 0, or asked as a direct question during elicitation for
 `spec.md`, `design.md`, or `plan.md`. There is no third path where the model
 decides on the user's behalf and moves on.
+
+## Interview until every rule has a checkable condition
+
+The Tier 2 spec rubric scores a business rule on whether it names a condition
+something could mechanically check — a threshold, a comparison, an enumerated
+set. That is not a grading standard discovered at the gate; it is the exit
+condition of this interview.
+
+Before you stop asking, every rule the user has described must survive this:
+**write the condition down.** Not the intent, the condition.
+
+| The user said | Not finished — ask | Finished |
+|---|---|---|
+| "totals shouldn't go over" | over what, and checked when? | `sum(allocations) <= 100`, before acceptance |
+| "it should fail gracefully" | fail how, returning what, to whom? | refused with a named reason, before any side effect |
+| "reasonably fast" | how fast, measured where, and what happens past it? | 5s, then the caller may retry with the same key |
+| "a few recipients" | fewest that makes sense, most allowed? | at least 2; no stated maximum, confirmed by the user |
+
+A rule you cannot write as a condition is a rule the user has not finished
+specifying, and the zero-inference invariant applies exactly here: do not pick
+the plausible threshold and move on. Ask.
+
+This is about how a rule is *written*. Whether the feature should exist at all
+is a different question, already settled in `references/discovery.md`'s
+challenge pass — do not reopen it here.

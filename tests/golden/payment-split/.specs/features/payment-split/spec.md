@@ -16,6 +16,8 @@ validation:
   - tier2_verdict: PASS
   - tier2_at: 2026-08-18
   - tier2_rounds: 1
+  - judge_model: sonnet
+  - judge_depth: fast
   - notes: "Round 1 scored 82 - EC-04 restated the happy path. Rewrote it as a concurrent-submission boundary; edge-case criterion went 6/15 to 14/15."
 ---
 

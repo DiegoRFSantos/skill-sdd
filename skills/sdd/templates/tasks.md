@@ -15,6 +15,8 @@ validation:                    # written by the quality gate — plan.md and tas
   - tier2_verdict: PASS
   - tier2_at: 2026-08-18
   - tier2_rounds: 2
+  - judge_model: sonnet
+  - judge_depth: fast
   - notes: "Scored with PLAN-FEAT-001 as a pair. Round 1 flagged Task 2.4 as two outcomes in one line; split into 2.4 and 2.5 before the re-judge."
 ---
 

@@ -93,3 +93,55 @@ catching it there.
       Traceability table.
 - [ ] `spec_ref` in the frontmatter resolves to an existing `spec` artifact,
       and every id in `dependencies` resolves to an existing `adr` artifact.
+
+
+## Written to pass
+
+Apply these while writing, so the gate confirms rather than corrects.
+
+- **Contracts name their symbols.** Not "the validation service" —
+  `SplitValidator.validate(payment, allocations) -> ValidationResult`. Not "an
+  error shape" — the named enum and its members. An executing agent should
+  never have to choose a name that the design should have given it.
+- **§9's File Map lists every file the feature touches**, by literal
+  repo-relative path, marked new or modified. A file that does not exist yet is
+  still written out in full: the task that creates it needs to be told exactly
+  where. This is what `tasks.md`'s `[files: ...]` tags draw on.
+- **Every interaction flow states its failure branches.** Timeout, partial
+  failure, duplicate submission, the dependency being down. A flow with only a
+  happy path scores zero on that criterion, and correctly so.
+- **Resilience numbers are literal, with units.** `5s timeout`, `3 retries with
+  exponential backoff`, `10 failures / 60s`. Never "reasonable," "appropriate,"
+  or "as needed."
+- **Observability names concrete signals** — the metric key, the log field —
+  not a description of what will eventually be logged.
+- **Conditional sections are triggered or explicitly marked
+  `_Not applicable: <reason>_`.** Silently omitting one is the failure mode
+  this rule exists to catch; the reason has to be real, not "not needed."
+- **Cross-cutting concerns defer to an ADR by reference.** If you find yourself
+  deciding auth, idempotency, or a concurrency strategy inline, that is an ADR,
+  not a design section.
+- **Schema changes are backward compatible, or the migration path is stated.**
+
+### The one diagram
+
+One per artifact, from this set, each with its own cap. Over cap, the diagram
+is **dropped, not shrunk** — a diagram that needs scrolling is worse than none,
+and exceeding the cap usually means the artifact covers more than one feature.
+
+| Diagram | Syntax | Cap |
+|---|---|---|
+| Flowchart, control flow with failure edges | `flowchart` | 12 nodes |
+| Data flow | `flowchart` with labeled edges and store nodes | 12 nodes |
+| C4, context or container level only | `C4Context` / `C4Container` | 10 elements |
+| Architecture | `architecture-beta` | 12 nodes |
+| Sankey, volume or flow distribution | `sankey-beta` | 10 links |
+
+`sankey-beta` and `architecture-beta` are beta in mermaid and C4 support is
+experimental; renderers disagree about all three. If the repo's own viewer does
+not render the type you picked, fall back to a `flowchart` rather than shipping
+a fenced block that displays as an error.
+
+A diagram is an index into the contracts and tables, never a place a
+requirement lives on its own. If a fact appears only in the diagram, it is not
+specified.

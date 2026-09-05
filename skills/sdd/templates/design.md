@@ -17,6 +17,8 @@ validation:
   - tier2_verdict: PASS
   - tier2_at: 2026-08-18
   - tier2_rounds: 1
+  - judge_model: sonnet
+  - judge_depth: fast
   - notes: "Round 1 scored 79 - the flows covered only the happy path. Added partial-failure and timeout branches; interaction-flow criterion went 8/20 to 18/20."
 ---
 

@@ -9,13 +9,11 @@ updated_at: 2026-08-18
 author: Diego
 status: active                # draft | active | completed | blocked | cancelled
 allocated_agents:
-  # Model ids are NEVER hardcoded here. Resolution order, checked in this
-  # order and stopping at the first that applies:
+  # Model ids are NEVER hardcoded here. Resolution order, first that applies:
   #   1. Repo convention — AGENTS.md / CLAUDE.md states a model for this role.
   #   2. The user's explicit answer when asked.
-  #   3. The agent's suggestion, driven by what this plan's tasks actually
-  #      build, weighing capability against cost and offered for confirmation.
-  # See references/artifact-plan-tasks.md for the full rule.
+  #   3. The agent's suggestion, from what this plan's tasks build, offered
+  #      for confirmation. See references/artifact-plan-tasks.md.
   - Coder: "resolved at plan time"       # resolved at plan time; never guessed — see references/artifact-plan-tasks.md
   - Tester: "resolved at plan time"       # resolved at plan time; never guessed — see references/artifact-plan-tasks.md
   - Reviewer: "resolved at plan time"             # resolved at plan time; never guessed — see references/artifact-plan-tasks.md
@@ -37,6 +35,8 @@ validation:                    # written by the quality gate — plan.md and tas
   - tier2_verdict: PASS
   - tier2_at: 2026-08-18
   - tier2_rounds: 2
+  - judge_model: sonnet
+  - judge_depth: fast
   - notes: "Round 1 scored 84 - M2 was a technical-layer slice, not independently shippable. Re-cut M2 around the recipient-notification path; milestone criterion went 11/20 to 19/20."
 ---
 

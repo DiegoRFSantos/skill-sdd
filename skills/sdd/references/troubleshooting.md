@@ -155,3 +155,14 @@ is in effect.
 - "I'll fix the symptom now and file the real fix for later."
 - Three fixes attempted and the test still fails — that is the architecture
   checkpoint, not a fourth attempt.
+
+## Optional: one Ishikawa diagram
+
+When a defect has several candidate causes and the point of the write-up is to
+show which were considered, a single fishbone diagram earns its place: mermaid
+`mindmap`, cap 6 bones with at most 3 causes each, falling back to
+`flowchart LR` where `mindmap` does not render.
+
+Use it to show the causes you ruled out, not to decorate a defect with one
+obvious cause. A fishbone with a single populated bone is a sentence pretending
+to be a diagram.
