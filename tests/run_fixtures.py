@@ -59,6 +59,7 @@ def main():
             failures.append("%s: RUNNER DRIFT — python and node disagree" % case.name)
 
     failures.extend(_check_clean(available))
+    failures.extend(_check_status())
 
     print("ran %d fixture(s) against runners: %s" % (len(cases), ", ".join(sorted(available))))
     if failures:
@@ -93,6 +94,51 @@ def _check_clean(available):
                     problems.append("%s: %s [%s] must lint clean but has %d blocker(s):\n  %s"
                                     % (label, artifact.name, name, len(blockers),
                                        json.dumps(blockers)))
+    return problems
+
+
+def _check_status():
+    """sdd_status.py must derive the golden example's real state off disk.
+
+    It shares the linter's parsers, so a change to frontmatter or task-line
+    parsing breaks both. This asserts the numbers, not just that it runs.
+    """
+    script = ROOT / "skills/sdd/scripts/sdd_status.py"
+    golden = ROOT / "tests/golden/payment-split"
+    if not script.exists():
+        return ["sdd_status.py is missing"]
+    proc = subprocess.run(
+        [sys.executable, str(script), "--json", "--repo-root", str(golden)],
+        capture_output=True, text=True,
+    )
+    if proc.returncode != 0:
+        return ["sdd_status.py exited %d:\n%s" % (proc.returncode, proc.stderr)]
+    try:
+        data = json.loads(proc.stdout)
+    except ValueError as exc:
+        return ["sdd_status.py did not emit valid JSON: %s" % exc]
+
+    problems = []
+    if len(data["features"]) != 1:
+        problems.append("status: expected 1 feature, got %d" % len(data["features"]))
+        return problems
+    feature = data["features"][0]
+    if len(feature["tasks"]) != 16:
+        problems.append("status: expected 16 tasks, got %d" % len(feature["tasks"]))
+    if feature["milestone"] != "M1":
+        problems.append("status: expected milestone M1, got %r" % feature["milestone"])
+    spec = next(p for p in feature["phases"] if p["phase"] == "spec")
+    if spec["tier2_verdict"] != "PASS":
+        problems.append("status: spec verdict should come off the validation block, got %r"
+                        % spec["tier2_verdict"])
+    first = feature["tasks"][0]
+    if not first["files"]:
+        problems.append("status: task files should be parsed from the [files:] tag")
+    if not first["description"] or "[" in first["description"]:
+        problems.append("status: task description should have its tags stripped, got %r"
+                        % first["description"])
+    if not data["adrs"]:
+        problems.append("status: the golden ADR should be listed")
     return problems
 
 

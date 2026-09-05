@@ -172,7 +172,22 @@ Para não responder a mesma pergunta toda vez:
 summary_preview: ask   # always | never | ask
 judge_model: sonnet    # em qual modelo o juiz do Tier 2 roda
 judge_depth: fast      # fast | full
+dashboard: on          # painel de progresso local — on | off
 ```
+
+Com `dashboard: on`, a skill sobe um painel local que mostra em que ponto a
+feature está — quais artefatos existem e que nota tiraram, o marco atual, o
+estado de cada tarefa e o log de bloqueios:
+
+```bash
+python3 ${CLAUDE_PLUGIN_ROOT}/skills/sdd/scripts/sdd_status.py --serve --repo-root .
+# http://127.0.0.1:4517
+```
+
+Ele não custa token nenhum: tudo que aparece ali **já está em disco**, porque a
+skill guarda o estado em arquivo e não na sessão. O painel lê os mesmos
+arquivos que o agente escreve. A economia vem de outro lugar — o agente para de
+narrar progresso no chat, e você olha em vez de ler.
 
 As mesmas 15 linhas do resumo viram a seção `## 0. At a Glance` do artefato —
 escritas uma vez, usadas nos dois lugares. Em `spec.md` e `design.md` essa

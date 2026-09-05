@@ -307,6 +307,14 @@ suggesting it is close enough.
 one-sentence justification under every criterion, including those at full
 marks, before the deficiency and fix lines.`
 
+When the dashboard is on (`references/dashboard.md`), append one line before
+dispatching — a three-minute judge changes nothing on disk until it finishes,
+so without this the dashboard looks frozen:
+
+```bash
+echo "{\"at\":\"$(date +%H:%M:%S)\",\"event\":\"Tier 2 judge dispatched for design.md\"}" >> .specs/.events.jsonl
+```
+
 The terse output is the largest speed lever available. Latency tracks output
 tokens, and justification prose for criteria that scored full marks is the bulk
 of what a judge writes and nobody reads.

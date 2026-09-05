@@ -1,0 +1,212 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SDD Progress</title>
+<style>
+  :root {
+    --bg: #f6f7f9;      --panel: #ffffff;   --ink: #14171a;
+    --muted: #5c6672;   --line: #dde2e8;    --accent: #3b6ea5;
+    --done: #2f7d4f;    --run: #b0761f;     --block: #b3423a;   --idle: #98a2ae;
+    --chip: #eef1f5;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #14171a;    --panel: #1c2126;   --ink: #e8ecf1;
+      --muted: #9aa5b1; --line: #2b3239;    --accent: #7aa8c0;
+      --done: #6fbf8b;  --run: #d8a24a;     --block: #e0796f;   --idle: #5c6672;
+      --chip: #232a31;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 24px; background: var(--bg); color: var(--ink);
+    font: 14px/1.5 ui-sans-serif, -apple-system, "Segoe UI", Roboto, sans-serif;
+  }
+  h1 { font-size: 18px; margin: 0 0 2px; }
+  h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .06em;
+       color: var(--muted); margin: 24px 0 10px; font-weight: 600; }
+  .sub { color: var(--muted); font-size: 12px; margin-bottom: 20px; }
+  .panel { background: var(--panel); border: 1px solid var(--line);
+           border-radius: 8px; padding: 14px 16px; }
+
+  /* Phase pipeline */
+  .pipeline { display: flex; gap: 8px; flex-wrap: wrap; }
+  .phase { flex: 1 1 130px; min-width: 130px; background: var(--panel);
+           border: 1px solid var(--line); border-left: 3px solid var(--idle);
+           border-radius: 6px; padding: 10px 12px; }
+  .phase.active { border-left-color: var(--done); }
+  .phase.draft  { border-left-color: var(--run); }
+  .phase.fail   { border-left-color: var(--block); }
+  .phase .name { font-weight: 600; }
+  .phase .meta { color: var(--muted); font-size: 12px; margin-top: 3px; }
+  .score { font-variant-numeric: tabular-nums; font-weight: 600; }
+  .score.pass { color: var(--done); }
+  .score.fail { color: var(--block); }
+
+  /* Tasks */
+  table { width: 100%; border-collapse: collapse; }
+  th { text-align: left; font-size: 12px; color: var(--muted); font-weight: 600;
+       padding: 6px 8px; border-bottom: 1px solid var(--line); }
+  td { padding: 6px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  tr:last-child td { border-bottom: 0; }
+  .mstone td { background: var(--chip); font-weight: 600; font-size: 12px;
+               color: var(--muted); }
+  .mark { width: 1.4em; text-align: center; font-weight: 700; }
+  .done .mark { color: var(--done); }
+  .in_progress .mark { color: var(--run); }
+  .blocked .mark { color: var(--block); }
+  .pending .mark { color: var(--idle); }
+  .done td.desc { color: var(--muted); }
+  code, .files { font: 12px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace;
+                 color: var(--muted); }
+  .files { display: block; margin-top: 2px; word-break: break-all; }
+  .agent { font-size: 12px; color: var(--muted); white-space: nowrap; }
+  .scroll { overflow-x: auto; }
+
+  .bar { height: 6px; background: var(--chip); border-radius: 3px; overflow: hidden;
+         margin: 8px 0 0; }
+  .bar > i { display: block; height: 100%; background: var(--done); }
+
+  .events li, .blockers li { margin-bottom: 4px; }
+  ul { margin: 0; padding-left: 18px; }
+  .empty { color: var(--muted); font-style: italic; }
+  .dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%;
+         background: var(--done); margin-right: 6px; vertical-align: middle; }
+  .stale .dot { background: var(--block); }
+  footer { margin-top: 26px; color: var(--muted); font-size: 12px; }
+</style>
+</head>
+<body>
+<h1 id="repo">SDD Progress</h1>
+<div class="sub"><span class="dot"></span><span id="tick">connecting…</span></div>
+<main id="out"></main>
+<footer>Derived from disk — <code>tasks.md</code> marks, frontmatter, and each artifact's
+<code>validation:</code> block. Nothing here is reported by the agent.</footer>
+
+<script>
+const MARKS = { done: "×", in_progress: "›", blocked: "!", pending: "·" };
+const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) =>
+  ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+
+function phaseClass(p) {
+  if (!p.exists) return "";
+  if (p.tier2_verdict === "FAIL") return "fail";
+  if (["active", "resolved", "done", "ready", "completed", "accepted"].includes(p.status))
+    return "active";
+  return "draft";
+}
+
+function renderPhases(phases) {
+  return `<div class="pipeline">` + phases.map((p) => {
+    if (!p.exists) {
+      return `<div class="phase"><div class="name">${esc(p.phase)}</div>
+              <div class="meta">not started</div></div>`;
+    }
+    const verdict = p.tier2_verdict;
+    let score = "";
+    if (verdict === "PASS" || verdict === "FAIL") {
+      const cls = verdict === "PASS" ? "pass" : "fail";
+      const depth = p.judge_depth ? ` ${esc(p.judge_depth)}` : "";
+      score = `<span class="score ${cls}">${esc(p.tier2_score)}</span> ${esc(verdict)}${depth}`;
+    } else if (verdict === "n/a") {
+      score = "no rubric";
+    }
+    const lines = p.lines ? ` &middot; ${p.lines} lines` : "";
+    return `<div class="phase ${phaseClass(p)}">
+      <div class="name">${esc(p.phase)}</div>
+      <div class="meta">${esc(p.status ?? "—")}${lines}</div>
+      <div class="meta">${score}</div>
+    </div>`;
+  }).join("") + `</div>`;
+}
+
+function renderTasks(tasks) {
+  if (!tasks.length) return `<p class="empty">No tasks yet.</p>`;
+  let last = null;
+  const rows = tasks.map((t) => {
+    let head = "";
+    if (t.milestone !== last) {
+      last = t.milestone;
+      head = `<tr class="mstone"><td colspan="4">${esc(t.milestone ?? "Tasks")}</td></tr>`;
+    }
+    const files = t.files.length
+      ? `<span class="files">${esc(t.files.join("  "))}</span>` : "";
+    return head + `<tr class="${esc(t.state)}">
+      <td class="mark">${MARKS[t.state] ?? "?"}</td>
+      <td><code>${esc(t.id)}</code></td>
+      <td class="desc">${esc(t.description)}${files}</td>
+      <td class="agent">${esc(t.agent ?? "")}</td>
+    </tr>`;
+  }).join("");
+  return `<div class="panel scroll"><table>
+    <thead><tr><th></th><th>Task</th><th>What</th><th>Agent</th></tr></thead>
+    <tbody>${rows}</tbody></table></div>`;
+}
+
+function renderFeature(f) {
+  const done = f.tasks.filter((t) => t.state === "done").length;
+  const pct = f.tasks.length ? Math.round((done / f.tasks.length) * 100) : 0;
+  const blocked = f.tasks.filter((t) => t.state === "blocked");
+  return `
+    <h2>${esc(f.name)}</h2>
+    ${renderPhases(f.phases)}
+    ${f.tasks.length ? `<div class="sub" style="margin:14px 0 0">
+        milestone ${esc(f.milestone ?? "—")} &middot; ${done}/${f.tasks.length} tasks
+        ${f.progress ? `&middot; declared ${esc(f.progress)}` : ""}
+        <div class="bar"><i style="width:${pct}%"></i></div>
+      </div>` : ""}
+    <h2>Tasks</h2>
+    ${renderTasks(f.tasks)}
+    ${blocked.length || f.blockers.length ? `<h2>Blockers</h2>
+      <div class="panel"><ul class="blockers">
+        ${blocked.map((t) => `<li><code>${esc(t.id)}</code> is blocked</li>`).join("")}
+        ${f.blockers.map((b) => `<li>${esc(b)}</li>`).join("")}
+      </ul></div>` : ""}`;
+}
+
+function render(data) {
+  document.getElementById("repo").textContent = `SDD Progress — ${data.repo}`;
+  const out = data.features.length
+    ? data.features.map(renderFeature).join("")
+    : `<p class="empty">No features under .specs/features/ yet.</p>`;
+  const adrs = data.adrs.length
+    ? `<h2>ADRs</h2><div class="panel"><ul>` + data.adrs.map((a) =>
+        `<li><code>${esc(a.id ?? a.file)}</code> — ${esc(a.status ?? "?")}</li>`).join("") +
+      `</ul></div>` : "";
+  const events = data.events.length
+    ? `<h2>In flight</h2><div class="panel"><ul class="events">` + data.events.slice(-12).map((e) =>
+        `<li><code>${esc(e.at ?? "")}</code> ${esc(e.event ?? JSON.stringify(e))}</li>`).join("") +
+      `</ul></div>` : "";
+  document.getElementById("out").innerHTML = out + adrs + events;
+}
+
+// Re-render only when the state actually changed. Rebuilding the DOM on every
+// poll throws away the scroll position once a second, which makes a page longer
+// than the viewport impossible to read.
+let lastSeen = null;
+
+async function poll() {
+  const sub = document.querySelector(".sub");
+  const tick = document.getElementById("tick");
+  try {
+    const res = await fetch("/status.json", { cache: "no-store" });
+    if (!res.ok) throw new Error(res.status);
+    const body = await res.text();
+    if (body !== lastSeen) {
+      lastSeen = body;
+      render(JSON.parse(body));
+      tick.textContent = "updated " + new Date().toLocaleTimeString();
+    }
+    sub.classList.remove("stale");
+  } catch (err) {
+    sub.classList.add("stale");
+    tick.textContent = "server not responding — is sdd_status.py --serve still running?";
+  }
+}
+poll();
+setInterval(poll, 1000);
+</script>
+</body>
+</html>

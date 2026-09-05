@@ -3,3 +3,6 @@
 node_modules/
 __pycache__/
 *.pyc
+
+# SDD dashboard event pings — session noise, not a record of the system
+.specs/.events.jsonl

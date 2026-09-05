@@ -36,7 +36,7 @@ Real usage over several days surfaced four defects and one gap:
 
 - Lowering the 90/100 pass bar, or changing what the rubrics measure.
 - Removing Tier 2 from any artifact that has a rubric today.
-- Building the progress dashboard in this pass (see §6).
+- ~~Building the progress dashboard in this pass~~ — built in a follow-up pass, see §6.
 
 ---
 
@@ -344,9 +344,9 @@ The authoring rule stated in `references/artifact-design.md` and
 description.** Not "the split service" — `src/payments/split_validator.py`.
 Not "the validation function" — `validate_split(payment, allocations)`.
 
-## 6. Deferred: live progress dashboard
+## 6. Live progress dashboard
 
-Designed, not built in this pass. Recorded so the decision is not re-litigated.
+Deferred in the first pass, built in the second, as designed below.
 
 **Architecture: derived from disk, plus tiny event pings.**
 
@@ -366,6 +366,13 @@ Designed, not built in this pass. Recorded so the decision is not re-litigated.
 
 The token saving is real but indirect: it comes from the agent no longer
 narrating progress in chat, which is §3, not from the dashboard itself.
+
+**As built**, one addition the design did not anticipate: the page re-renders
+only when `status.json` actually changed. Rebuilding the DOM on every poll
+throws away the scroll position once a second, which makes a task list longer
+than the viewport unreadable. It is also gated behind `dashboard: on` in
+`sdd.config.yml` and off by default, and the agent gives the URL exactly once —
+re-announcing it every phase would be the same narration §3 removes.
 
 ---
 
@@ -389,6 +396,9 @@ narrating progress in chat, which is §3, not from the dashboard itself.
 | `skills/sdd/scripts/rules.json` | `## 0. At a Glance` and `## 9. File Map` sections; `max_lines` budgets |
 | `skills/sdd/scripts/sdd_lint.py` | `max_lines` check, `review` severity; At a Glance 15-line check; `[files: ...]` task tag |
 | `skills/sdd/scripts/sdd_lint.mjs` | same, kept at parity |
+| `skills/sdd/scripts/sdd_status.py` | new — derives state from disk, serves it |
+| `skills/sdd/scripts/dashboard.html` | new — the static page |
+| `skills/sdd/references/dashboard.md` | new — how it works, and the event-ping rules |
 
 ## Testing
 

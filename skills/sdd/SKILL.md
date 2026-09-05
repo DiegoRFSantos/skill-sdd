@@ -57,6 +57,15 @@ binding as the invariants above.
 Terseness applies to your messages, not to the artifacts — and never to a
 question that zero inference requires you to ask.
 
+## Optional: the progress dashboard
+
+```bash
+grep '^dashboard:' .specs/sdd.config.yml 2>/dev/null
+```
+
+`on` → start it in the background once, give the URL once, then never mention
+it again. See `references/dashboard.md`. Absent or `off` → do not start it.
+
 ## Step 1 — Detect state before doing anything
 
 State lives on disk, not in memory. A cold session reconstructs it:

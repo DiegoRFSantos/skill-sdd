@@ -99,6 +99,10 @@ four things and nothing else:
    document — **including the named symbols and signatures verbatim.**
 4. How its work will be verified.
 
+When the dashboard is on, append one event line per dispatch
+(`references/dashboard.md`) — a task moves from `[ ]` to `[/]` on disk, but the
+minutes in between are invisible without it.
+
 Points 2 and 3 are what make a small model safe here. A subagent on a
 Haiku-class model does not fail loudly on a vague reference: it produces a
 plausible path and a plausible function name, both wrong, and the failure only
