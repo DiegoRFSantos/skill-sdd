@@ -103,8 +103,13 @@ Step 3 instead.
    under an existing `BR` if the change needed a new observable outcome
    without a new rule). Keep §9's Traceability Matrix consistent with
    whatever you touched.
-3. Bump `updated_at` in the frontmatter to today's date.
-4. Add a row to §11 Change Log describing:
+3. Re-read `## 0. At a Glance`. If those 15 lines now describe behavior that
+   is no longer there, correct them — it is the one section a reader trusts
+   without checking, so a stale one is worse than none. Most fast-track
+   changes will not touch it; a change that does is a signal the fast-track
+   classification deserves a second look.
+4. Bump `updated_at` in the frontmatter to today's date.
+5. Add a row to §11 Change Log describing:
    - what changed, in one or two sentences,
    - why it qualified for fast-track — the three-criteria check, briefly
      (e.g. "1 file, 12 lines, existing BR-03 threshold only, no new

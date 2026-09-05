@@ -8,7 +8,7 @@ shape, required sections, forbidden patterns, cross-references that resolve,
 acyclic task DAGs, empty discovery ledgers, symmetric ADR supersede pointers,
 a declared coverage threshold. **Tier 2** is this file: a semantic judge that
 reads a Tier-1-clean artifact and scores it against a fixed rubric for the
-things no linter can see — a business rule so vague it can't be falsified, a
+things no linter can see — a business rule too vague to check, a
 design that never mentions what happens when a call fails, an ADR whose
 "alternatives" are straw men, a plan whose milestones are just equal-sized
 chunks of work.
@@ -21,13 +21,21 @@ Tier 1 pass, and only then spend a Tier 2 pass on it.
 
 ## What the gate does not apply to
 
-The summary preview from `references/summary-preview.md` is not an artifact
-and is never gated — not Tier 1, not Tier 2, not "quickly, just to check."
-It has no frontmatter and no required sections, so Tier 1 has nothing to
-check; and a rubric written for a 300-line contract scores a 15-line sketch
-as catastrophically incomplete, which is true and useless. The human's
-approval of the preview is the entire gate for that step. The gate below
-applies to the full artifact the preview precedes.
+The 15-line summary from `references/summary-preview.md` is never judged, in
+either of the two places it appears — not Tier 1, not Tier 2, not "quickly,
+just to check."
+
+- **The chat preview** has no frontmatter and no sections, so Tier 1 has
+  nothing to check and Tier 2 has nothing to score.
+- **`## 0. At a Glance`**, the same 15 lines persisted as the artifact's first
+  section, gets exactly one Tier 1 check: that it is within its cap. **No Tier
+  2 criterion scores its content**, and no criterion elsewhere may be justified
+  by what it does or does not say.
+
+A rubric written for a 200-line contract scores a 15-line sketch as
+catastrophically incomplete, which is true and useless. The human's approval is
+the entire gate for those 15 lines. Everything else in the artifact is judged
+exactly as below.
 
 ## Why the judge must be a stranger to the work
 

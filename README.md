@@ -170,7 +170,16 @@ Para não responder a mesma pergunta toda vez:
 ```yaml
 # .specs/sdd.config.yml
 summary_preview: ask   # always | never | ask
+judge_model: sonnet    # em qual modelo o juiz do Tier 2 roda
+judge_depth: fast      # fast | full
 ```
+
+As mesmas 15 linhas do resumo viram a seção `## 0. At a Glance` do artefato —
+escritas uma vez, usadas nos dois lugares. Em `spec.md` e `design.md` essa
+seção é obrigatória e o limite de 15 linhas é verificado pelo linter. Ela
+nunca é julgada pelo Tier 2: uma rubrica feita para um contrato de 200 linhas
+avalia um resumo de 15 como catastroficamente incompleto, o que é verdade e é
+inútil.
 
 ---
 
@@ -185,7 +194,7 @@ flowchart TD
 
     T2 -->|"FAIL — abaixo de 90"| TRIAGE["Lista de deficiências específicas<br/>com a correção exata"]
     TRIAGE --> FIX2["Corrige só o que foi apontado"]
-    FIX2 --> T2NEW["Juiz NOVO, sem memória<br/>da rodada anterior"]
+    FIX2 --> T2NEW["Juiz NOVO, sem memória<br/>da rodada anterior<br/>(no modo fast, só uma vez)"]
     T2NEW --> T2
 
     T2 -->|"PASS ≥ 90"| REC["Grava nota + notas no bloco<br/><code>validation:</code> do frontmatter"]
@@ -203,6 +212,24 @@ suficiente. O Tier 2 roda obrigatoriamente como subagente separado, que
 recebe apenas o texto do artefato e a rubrica — nunca a conversa que o
 gerou.
 
+**Um juiz por rodada, nunca em paralelo.** O pipeline é sequencial por
+construção — design depende de spec ativa —, então disparar vários juízes ao
+mesmo tempo não ganha nada e faz o mais lento ditar o relógio de todos.
+
+**Dois modos, mesma rubrica.** `fast` e `full` usam os mesmos critérios, os
+mesmos pesos e a mesma nota de corte de 90. A diferença é quanto o juiz
+escreve e quantas vezes ele roda:
+
+| | `fast` | `full` |
+|---|---|---|
+| Critério com nota cheia | só a nota | nota + justificativa |
+| Critério abaixo do máximo | nota + deficiência + correção | idem, com justificativa |
+| Limite de rodadas | **1 rejulgamento**, depois você decide | sem limite |
+
+O modo `fast` só é viável porque cada exigência da rubrica também está escrita
+como regra de autoria nas referências `artifact-*.md`: o artefato nasce
+aprovado em vez de ser corrigido até passar.
+
 **A nota fica no arquivo, não no chat:**
 
 ```yaml
@@ -212,7 +239,9 @@ validation:
   - tier2_score: 94
   - tier2_verdict: PASS
   - tier2_at: 2026-08-27
-  - tier2_rounds: 2
+  - tier2_rounds: 1
+  - judge_model: sonnet
+  - judge_depth: fast
   - notes: "Rodada 1 tirou 82 - o EC-04 era o caminho feliz disfarçado.
             Reescrito como limite de submissão concorrente."
 ```
@@ -272,16 +301,23 @@ O que acontece:
    pagamento dividido, ou é o pedido ser cancelado quando alguém não paga?"
 2. **discovery.md** — problema, alternativas descartadas, riscos aceitos,
    ledger de perguntas em aberto (que precisa fechar antes de seguir).
-3. **Resumo de 15 linhas** → você aprova ou corrige.
-4. **spec.md** — `BR-01..NN`, `AC-01..NN` em Gherkin, casos de borda,
-   matriz de rastreabilidade. Nenhum nome de tecnologia, nenhuma rota HTTP.
+3. **Resumo de 15 linhas** → você aprova ou corrige. Ele vira o
+   `## 0. At a Glance` do artefato.
+4. **spec.md** — `BR-01..NN` e `AC-01..NN` em linhas de tabela, casos de
+   borda, matriz de rastreabilidade. Nenhum nome de tecnologia, nenhuma rota
+   HTTP.
 5. **Portão** → Tier 1 limpo, Tier 2 tirou 94/100, nota gravada no arquivo.
-6. **design.md** → contratos tipados, fluxos com falha parcial, timeouts com
-   número (nunca "um valor razoável").
+6. **design.md** → contratos com o símbolo e a assinatura exatos, fluxos com
+   falha parcial, timeouts com número (nunca "um valor razoável"), e o
+   **§9 File Map**: todo arquivo que a feature toca, pelo caminho literal.
 7. **test-catalog.md** → você assina os cenários que importam.
-8. **plan.md + tasks.md** → marcos entregáveis, DAG acíclico, papéis.
-9. **Execução** → um worktree por stream, um subagente novo por tarefa,
-   testes rodados de verdade antes de qualquer `[x]`.
+8. **plan.md + tasks.md** → marcos entregáveis, DAG no nível de marco, e cada
+   tarefa com a tag `[files: ...]` dizendo exatamente onde ela pode escrever.
+9. **Handoff** → com o `tasks.md` aprovado, a skill te dá o comando pra abrir
+   uma sessão nova, em vez de implementar com a janela de contexto cheia da
+   entrevista.
+10. **Execução** → um worktree por stream, um subagente novo por tarefa,
+    testes rodados de verdade antes de qualquer `[x]`.
 
 ### 2. Mudança pequena numa feature já pronta
 
@@ -336,7 +372,7 @@ Tudo de uma feature mora numa pasta só:
 
 ```
 .specs/
-  sdd.config.yml                    # opcional: preferência do resumo curto
+  sdd.config.yml                    # opcional: resumo curto, modelo e modo do juiz
   features/
     payment-split/
       discovery.md                  # fase 0: problema, desafio, ledger
@@ -395,9 +431,12 @@ spec.md
 1 blocker(s), 0 review item(s)
 ```
 
-A única regra que emite `review` hoje é `catalog_coverage_prompt`: aponta
-ids `AC-NN`/`EC-NN` da spec sem caso de teste no catálogo e sem registro em
-"Deliberate Gaps" — um empurrãozinho, sem reprovar o portão.
+Duas regras emitem `review` sem reprovar o portão. `catalog_coverage_prompt`
+aponta ids `AC-NN`/`EC-NN` da spec sem caso de teste no catálogo e sem registro
+em "Deliberate Gaps". `LINE_BUDGET` avisa quando um artefato passa do orçamento
+de linhas do seu tipo (spec 200, design 250, discovery 170, adr 120,
+test-catalog 120, plan 150, tasks 120) — uma feature realmente grande pode
+passar, ela só não passa sem ninguém perceber.
 
 ---
 
@@ -423,7 +462,13 @@ chamar o juiz do Tier 2 "só por segurança", isso é sinal de que a mudança
 - Escolher modelo, limiar de cobertura ou estratégia de rollout no seu lugar
 - Revalidar um artefato na hora de implementar quando o bloco `validation:`
   já registra um PASS e nada mudou
-- Lintar ou julgar o resumo de 15 linhas
+- Lintar ou julgar o resumo de 15 linhas, nem a seção `## 0. At a Glance`
+- Disparar mais de um juiz por artefato por rodada, ou julgar dois artefatos
+  ao mesmo tempo
+- Escolher o modelo do juiz ou o modo `fast`/`full` sem perguntar
+- Escrever uma tarefa sem a tag `[files: ...]`, ou citar arquivo e símbolo por
+  descrição quando o design os nomeia literalmente
+- Publicar um diagrama mermaid acima do limite de nós — o certo é não publicar
 - Criar pasta antes de existir arquivo para pôr dentro
 - Marcar tarefa como `[x]` sem rodar o teste dela
 - Passar de um marco sem você assinar embaixo
