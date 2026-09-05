@@ -57,14 +57,19 @@ binding as the invariants above.
 Terseness applies to your messages, not to the artifacts — and never to a
 question that zero inference requires you to ask.
 
-## Optional: the progress dashboard
+## Configuration
+
+Four optional keys, all in `.specs/sdd.config.yml`, all documented in
+`references/configuration.md`:
 
 ```bash
-grep '^dashboard:' .specs/sdd.config.yml 2>/dev/null
+cat .specs/sdd.config.yml 2>/dev/null
 ```
 
-`on` → start it in the background once, give the URL once, then never mention
-it again. See `references/dashboard.md`. Absent or `off` → do not start it.
+`summary_preview`, `judge_model`, `judge_depth`, `dashboard`. The file is
+optional; an absent key means ask. **`judge_model` and `judge_depth` are never
+guessed.** `dashboard: on` → start it once, give the URL once, never mention it
+again (`references/dashboard.md`).
 
 ## Step 1 — Detect state before doing anything
 

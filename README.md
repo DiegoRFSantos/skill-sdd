@@ -198,6 +198,27 @@ inútil.
 
 ---
 
+## Atualizando da 1.x para a 2.0 — mudança quebrando
+
+A 2.0 adiciona três exigências que **reprovam artefatos escritos na 1.x**:
+
+| O que falta | Onde | Como resolver |
+|---|---|---|
+| `## 0. At a Glance` | `spec.md`, `design.md` | Escreva as 15 linhas de resumo como primeira seção |
+| `## 9. File Map` | `design.md` | Liste todo arquivo que a feature toca, pelo caminho literal. O `## 9. Change Log` vira `## 10.` |
+| `[files: ...]` | cada linha de tarefa em `tasks.md` | Os caminhos que aquela tarefa pode tocar, tirados do File Map |
+
+Não existe migração automática: as três coisas exigem conteúdo que só quem
+escreveu o artefato sabe. O linter aponta exatamente o que falta e em qual
+arquivo — rode `sdd_lint.py` no artefato quando for mexer nele de novo, e
+resolva ali. Artefatos da 1.x continuam legíveis e corretos; eles só não passam
+mais no Tier 1 até ganharem essas seções.
+
+O `LINE_BUDGET` é `review`, não bloqueia: um artefato de 400 linhas da 1.x
+continua passando, com um aviso.
+
+---
+
 ## O portão de qualidade, em dois níveis
 
 ```mermaid

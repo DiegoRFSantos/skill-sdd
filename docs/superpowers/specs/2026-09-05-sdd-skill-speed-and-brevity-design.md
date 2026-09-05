@@ -245,6 +245,12 @@ Rules that apply to all nine:
 - **Never a substitute for the contract text.** A diagram is an index into the
   prose and tables, not a place where a requirement lives on its own. If a fact
   exists only in the diagram, it is not specified.
+- **`design.md` is the only artifact allowed two diagrams** — one structural in
+  §1.1 and one `sequenceDiagram` in §4 (cap 8 participants, failure branches as
+  `alt`/`else`). They answer different questions: a component map cannot show
+  ordering, a sequence cannot show what exists. Every other artifact gets one
+  or none. *(Added after the first pass: the skill already required a sequence
+  diagram for interaction flows, and the nine-type vocabulary contradicted it.)*
 - **`spec.md` gets event modeling or nothing.** It is a business-language
   contract; a box-and-arrow component diagram there invites exactly the
   implementation leakage the spec rubric penalizes. Event modeling is permitted
@@ -392,13 +398,14 @@ re-announcing it every phase would be the same narration §3 removes.
 | `skills/sdd/references/discovery.md` | event-modeling diagram permitted |
 | `skills/sdd/references/execution.md` | reads `judge_depth`; cold-session entry point |
 | `skills/sdd/templates/*.md` | worked examples removed; tables throughout; `## 0. At a Glance` added to `spec.md` and `design.md` only |
-| `skills/sdd/references/examples/payment-split/` | new — the extracted worked examples |
+| ~~`skills/sdd/references/examples/payment-split/`~~ | not created — see the deviation note in §4.1; `tests/golden/payment-split/` is the single worked example |
 | `skills/sdd/scripts/rules.json` | `## 0. At a Glance` and `## 9. File Map` sections; `max_lines` budgets |
 | `skills/sdd/scripts/sdd_lint.py` | `max_lines` check, `review` severity; At a Glance 15-line check; `[files: ...]` task tag |
 | `skills/sdd/scripts/sdd_lint.mjs` | same, kept at parity |
 | `skills/sdd/scripts/sdd_status.py` | new — derives state from disk, serves it |
 | `skills/sdd/scripts/dashboard.html` | new — the static page |
 | `skills/sdd/references/dashboard.md` | new — how it works, and the event-ping rules |
+| `skills/sdd/references/configuration.md` | new — every sdd.config.yml key in one place |
 
 ## Testing
 

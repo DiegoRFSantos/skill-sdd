@@ -111,6 +111,34 @@ _Not applicable: the migration adds a table no running code reads yet._
 | Submit a split | Controller checks the idempotency key, validator applies BR-01..BR-03, ledger client publishes | Duplicate key returns the first result unchanged; validator refusal returns the reason without calling the ledger; ledger timeout leaves the split `proposed` and the submission retriable |
 | Concurrent submissions (EC-02) | First writer wins on the unique `payment_id` constraint | Second write fails the constraint and is refused with `SPLIT_ALREADY_ACCEPTED`, not a generic error |
 
+```mermaid
+sequenceDiagram
+  participant O as Organizer
+  participant C as SplitController
+  participant V as SplitValidator
+  participant L as LedgerClient
+  O->>C: submit(split, idempotency_key)
+  alt key already seen
+    C-->>O: stored response, no side effect
+  else new key
+    C->>V: validate(payment, allocations)
+    alt refused
+      V-->>C: ValidationResult(accepted=false, reason)
+      C-->>O: refusal reason
+    else accepted
+      V-->>C: ValidationResult(accepted=true)
+      C->>L: publish_accepted(split)
+      alt ledger times out after 5s
+        L-->>C: timeout
+        C-->>O: still proposed, retry with same key
+      else published
+        L-->>C: ack
+        C-->>O: accepted
+      end
+    end
+  end
+```
+
 ## 5. Resilience & Security
 
 | Concern | Decision |
