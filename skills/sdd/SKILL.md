@@ -69,8 +69,9 @@ it; `references/context-economy.md` has the rest and the measurements.
   section, `--section N.N` or `--ids BR-01,AC-02` to take only it.
 - **Grep before you read.** State detection in Step 1 never reads an artifact.
 - **Offer a context reset after every gated artifact**, with the saving
-  attached: `sdd_status.py --context` gives the number. `/clear` at a phase
-  boundary, `/compact` mid-phase. You cannot run either — offer once, in one
+  attached: `sdd_status.py --context` gives the number. A full reset at a phase boundary, a
+  compaction mid-phase — named for whatever the human's harness uses (in Claude
+  Code, `/clear` and `/compact`). You cannot run either: offer once, in one
   line, and accept the answer.
 
 ## Configuration
@@ -89,21 +90,26 @@ again (`references/dashboard.md`).
 
 ## Step 0 — Find the scripts, whichever way this was installed
 
-The three install shapes put the scripts in different places, and only a plugin
-install sets `CLAUDE_PLUGIN_ROOT`. Resolve the directory once per session and
-reuse it; never hardcode one of the three paths.
+This skill runs under any agent harness that can read files, run shell
+commands, and dispatch a subagent. Installs put the scripts in different
+places, so resolve the directory once per session and reuse it; never hardcode
+one path.
 
 ```bash
-SDD=$(for d in "$CLAUDE_PLUGIN_ROOT/skills/sdd" "$HOME/.claude/skills/sdd" ".claude/skills/sdd"; do
-  [ -f "$d/scripts/sdd_lint.py" ] && echo "$d" && break
+SDD=$(for d in "$SDD_HOME" "$CLAUDE_PLUGIN_ROOT/skills/sdd" \
+               "$HOME/.claude/skills/sdd" ".claude/skills/sdd" \
+               "$HOME/.config/sdd" ".sdd" "skills/sdd"; do
+  [ -n "$d" ] && [ -f "$d/scripts/sdd_lint.py" ] && echo "$d" && break
 done)
 echo "${SDD:-NOT FOUND}"
 ```
 
-Every script invocation in this skill is then `"$SDD/scripts/<script>.py"`. If
-the resolver prints `NOT FOUND`, say so plainly — the deterministic gate cannot
-run, and `references/quality-gate.md`'s Tier 1 checklist has to be walked by
-hand instead.
+Every script invocation is then `"$SDD"/scripts/<script>.py`. `SDD_HOME` is the
+escape hatch: any harness or layout not covered above works by exporting it.
+
+If the resolver prints `NOT FOUND`, say so plainly — the deterministic gate
+cannot run, and `references/quality-gate.md`'s Tier 1 checklist has to be walked
+by hand instead.
 
 ## Step 1 — Detect state before doing anything
 

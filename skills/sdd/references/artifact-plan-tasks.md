@@ -115,7 +115,7 @@ glance, that nothing downstream of a gate can start before every
 `coverage_threshold` in plan.md's frontmatter is never defaulted silently.
 Resolve it in this fixed order, stopping at the first source that applies:
 
-1. **Repo convention** — check `AGENTS.md` or `CLAUDE.md` for a stated
+1. **Repo convention** — check `AGENTS.md`, `CLAUDE.md` or `GEMINI.md` for a stated
    coverage policy (a line/branch percentage, a scope, or an explicit
    statement that the repo does not gate on coverage). If found, use it
    verbatim and note the source.
@@ -162,7 +162,7 @@ token per role (`<model-for-implementation>`, `<model-for-test-authoring>`,
 documented inline as a YAML comment. Resolve each role's actual model in
 this fixed order, stopping at the first source that applies:
 
-1. **Repo convention** — `AGENTS.md` or `CLAUDE.md` names a required or
+1. **Repo convention** — `AGENTS.md`, `CLAUDE.md` or `GEMINI.md` names a required or
    preferred model for this role or for the repo generally. If present,
    use it and note the source; this always wins over the agent's own
    judgment.

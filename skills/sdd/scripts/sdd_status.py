@@ -257,9 +257,9 @@ def _claude_turn(line):
 def _generic_turn(line):
     """Usage off a line in the documented generic shape — see references/dashboard.md.
 
-    Any agent that can emit one JSON object per turn with a `usage` object using
+    Any harness that writes one JSON object per turn with a `usage` object using
     Anthropic's field names is readable here without new code. This is the seam
-    another tool plugs into.
+    another tool plugs into, and it is why the panel is not Claude-only.
     """
     try:
         record = json.loads(line)
@@ -269,13 +269,14 @@ def _generic_turn(line):
     return use if isinstance(use, dict) else None
 
 
-# Where each agent keeps its per-session token accounting. Claude Code's
-# location is known; anything else is configured, because guessing a path and
-# silently reading nothing is worse than reporting that a source is unset.
+# Where each harness keeps its per-session token accounting. Claude Code's
+# location is known and read automatically; any other harness is configured via
+# SDD_USAGE_DIR, because guessing a path and silently reading nothing is worse
+# than reporting that a source is unset.
 SOURCES = [
     {"agent": "claude", "dir": lambda root: _project_dir(root),
      "glob": "*.jsonl", "reader": _claude_turn},
-    {"agent": "devin", "dir": lambda root: _env_dir("SDD_DEVIN_SESSIONS"),
+    {"agent": "other", "dir": lambda root: _env_dir("SDD_USAGE_DIR"),
      "glob": "*.jsonl", "reader": _generic_turn},
 ]
 

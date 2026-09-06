@@ -13,12 +13,12 @@ The order below is fixed.
 A recommendation naming a model the human cannot use is worse than no
 recommendation. Ask first, once, in one message:
 
-> Which models do you have access to? (Claude via this CLI, an Anthropic API
-> key, Bedrock/Vertex/Foundry, a non-Anthropic provider, or a mix — and any
-> your org has ruled out.)
+> Which models do you have access to? (Whatever your agent harness provides,
+> an API key, Bedrock/Vertex/Foundry, a non-Anthropic provider, or a mix — and
+> any your org has ruled out.)
 
-Check the repo before asking — `AGENTS.md`, `CLAUDE.md`, or a prior `plan.md`
-may already answer it, and re-asking a settled question is its own waste.
+Check the repo before asking — `AGENTS.md`, `CLAUDE.md`, `GEMINI.md`, or a
+prior `plan.md` may already answer it, and re-asking a settled question is its own waste.
 
 ## Step 2 — Look up what exists now; do not answer from memory
 
@@ -72,9 +72,10 @@ it trivially overridable. Never present four blanks.
 
 - **`plan.md`'s `allocated_agents`** records what the human chose, in whatever
   form they gave it.
-- **Dispatching a subagent through this CLI's `Agent` tool** takes a short
-  family name (`sonnet`, `opus`, `haiku`, `fable`), not an API model id. A full
-  API id passed there will not resolve.
+- **Dispatching a subagent** may take a different form of name than an API id.
+  Claude Code's `Agent` tool, for instance, takes a short family name
+  (`sonnet`, `opus`, `haiku`), and a full API id passed there will not resolve.
+  Check what your harness expects before dispatching.
 
 Record the human's choice, and translate at dispatch time. Do not silently
 rewrite what they said into the other form.

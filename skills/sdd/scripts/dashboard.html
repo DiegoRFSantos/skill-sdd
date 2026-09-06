@@ -115,7 +115,7 @@
                padding: 2px 7px; border-radius: 10px; background: var(--chip);
                color: var(--muted); }
   .agent-tag.claude { color: var(--accent); }
-  .agent-tag.devin { color: var(--run); }
+  .agent-tag.other { color: var(--run); }
   .label-cell input { font: inherit; color: var(--ink); background: var(--bg);
                       border: 1px solid var(--accent); border-radius: 4px;
                       padding: 2px 6px; width: 15ch; }
@@ -151,7 +151,7 @@ const STRINGS = {
     noFeatures: "No features under .specs/features/ in this project yet.",
     noTasks: "No tasks yet.", noSessions: "No sessions found yet.",
     open: "open",
-    notReading: (a) => `Not reading: ${a}. Point SDD_DEVIN_SESSIONS at a session directory to include it.`,
+    notReading: (a) => `Not reading: ${a}. Point SDD_USAGE_DIR at a session directory to include it.`,
     costNote: (ctx, turns) => `Cost tracks <b>turns &times; context</b>: everything in context is
       re-read every turn, so ${ctx} &times; ${turns} turns is where the cache-read total comes
       from. Cache reads bill at a fraction of fresh input; output is the priciest per token.
@@ -175,7 +175,7 @@ const STRINGS = {
     noFeatures: "Nenhuma feature em .specs/features/ neste projeto ainda.",
     noTasks: "Nenhuma tarefa ainda.", noSessions: "Nenhuma sessão encontrada ainda.",
     open: "abertas",
-    notReading: (a) => `Não está lendo: ${a}. Aponte SDD_DEVIN_SESSIONS para um diretório de sessões para incluir.`,
+    notReading: (a) => `Não está lendo: ${a}. Aponte SDD_USAGE_DIR para um diretório de sessões para incluir.`,
     costNote: (ctx, turns) => `O custo é <b>turnos &times; contexto</b>: tudo que está no contexto
       é relido a cada turno, então ${ctx} &times; ${turns} turnos é de onde vem o total de leitura
       de cache. Leitura de cache custa uma fração da entrada nova; a saída é a mais cara por token.

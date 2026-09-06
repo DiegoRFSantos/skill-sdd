@@ -10,7 +10,7 @@ author: Diego
 status: active                # draft | active | completed | blocked | cancelled
 allocated_agents:
   # Model ids are NEVER hardcoded here. Resolution order, first that applies:
-  #   1. Repo convention — AGENTS.md / CLAUDE.md states a model for this role.
+  #   1. Repo convention — AGENTS.md / CLAUDE.md / GEMINI.md names a model.
   #   2. The user's explicit answer when asked.
   #   3. The agent's suggestion, from what this plan's tasks build, offered
   #      for confirmation. See references/artifact-plan-tasks.md.

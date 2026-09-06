@@ -146,9 +146,13 @@ exists to cut.
 If the panel is empty, this repo has no transcripts under `~/.claude/projects/`
 yet — nothing is broken.
 
-**Other agents.** Any tool that writes one JSON object per turn to a local
-`*.jsonl`, with a `usage` object using Anthropic's field names
-(`input_tokens`, `cache_read_input_tokens`, `output_tokens`, ...), is read by
-pointing `SDD_DEVIN_SESSIONS` at its directory. This is deliberately
-file-only: a source that needs a network call and an API key is out of scope
-for this dashboard, whatever it would show.
+**Other harnesses.** Claude Code's transcript directory is read automatically.
+Any other tool that writes one JSON object per turn to a local `*.jsonl`, with a
+`usage` object using Anthropic's field names (`input_tokens`,
+`cache_read_input_tokens`, `output_tokens`, ...), is read by pointing
+`SDD_USAGE_DIR` at its directory.
+
+This is deliberately file-only: a source that needs a network call and an API
+key is out of scope for this dashboard, whatever it would show. A harness that
+keeps its accounting only behind an API cannot be read here, and the panel says
+so rather than pretending.

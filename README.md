@@ -1,9 +1,16 @@
-# sdd — Spec-Driven Development para Claude Code
+# sdd — Spec-Driven Development para agentes de código
 
 > **O código não nasce de uma conversa. Nasce de uma especificação aprovada.**
 
-`sdd` é um plugin do Claude Code que troca o "planejamento por conversa" por
-um **pipeline de artefatos com portões de qualidade**. Cada etapa produz um
+`sdd` é uma skill que troca o "planejamento por conversa" por um **pipeline de
+artefatos com portões de qualidade**.
+
+Funciona em **qualquer agente de código** que saiba ler arquivos, rodar comandos
+no shell e despachar um subagente — Claude Code, Cursor, Copilot CLI, Gemini
+CLI, Codex e afins. Não há dependência de nenhum deles: o estado mora em
+arquivos markdown no seu repositório, e as ferramentas são scripts Python/Node
+comuns. O que muda de um agente pro outro é só o nome do comando de limpar
+contexto e o formato do despacho de subagente — a skill pergunta ou detecta. Cada etapa produz um
 documento; cada documento passa por um linter determinístico e por um juiz
 semântico independente antes que a próxima etapa comece.
 
@@ -31,6 +38,18 @@ Todo mundo já viveu isto:
 ---
 
 ## Instalação
+
+### Qualquer agente (manual — funciona em todos)
+
+Copie a pasta `skills/sdd` para onde o seu agente procura skills. Passo a passo
+mais abaixo, em **Instalação manual**. Se o seu agente não tiver um lugar
+padrão, exporte `SDD_HOME` apontando pra pasta e pronto:
+
+```bash
+export SDD_HOME=/caminho/para/skills/sdd
+```
+
+### Claude Code (marketplace)
 
 Dentro do Claude Code, adicione este repositório como marketplace:
 
@@ -61,10 +80,10 @@ padrão.
 Depois é só falar normalmente — a skill se ativa sozinha em pedidos de
 feature, mudança, bug ou revisão de artefato.
 
-### Instalação manual (sem marketplace)
+### Instalação manual (qualquer agente)
 
-Se os comandos acima não funcionarem, ou se você preferir só copiar os
-arquivos, dá para instalar na mão. São dois passos.
+Funciona em qualquer ferramenta, inclusive as que não têm marketplace. São dois
+passos.
 
 **1. Baixe os arquivos.** Clique em **Code → Download ZIP** na página do
 repositório no GitHub e descompacte. Ou, se você usa git:
@@ -79,6 +98,7 @@ git clone https://github.com/DiegoRFSantos/skill-sdd.git
 |---|---|---|
 | **Só neste projeto** | `<seu-projeto>/.claude/skills/sdd` | Quer testar, ou usar só num repositório |
 | **Em todos os projetos** | `~/.claude/skills/sdd` | Quer a skill sempre disponível |
+| **Outro agente** | onde ele procurar, ou qualquer pasta + `export SDD_HOME=<pasta>` | Não usa Claude Code |
 
 No terminal, a partir da pasta que você baixou:
 
@@ -103,8 +123,9 @@ No Finder ou no Explorador de Arquivos funciona igual: arraste a pasta `sdd`
 ~/.claude/skills/sdd/SKILL.md          (ou .claude/skills/sdd/SKILL.md no projeto)
 ```
 
-Abra o Claude Code de novo e peça alguma coisa — "quero criar uma feature de
-X". A skill se ativa sozinha.
+Abra o agente de novo e peça alguma coisa — "quero criar uma feature de X". A
+skill se ativa sozinha. Em agentes que não carregam skills automaticamente,
+aponte pro `SKILL.md` e peça pra seguir o que está lá.
 
 > **A pasta `.claude` começa com ponto e fica escondida.** No Finder, aperte
 > `Cmd + Shift + .` para ver arquivos ocultos. Se ela não existir, pode criar.
@@ -122,6 +143,9 @@ Você **não** precisa copiar o resto do repositório — `tests/`, `docs/` e
 - **`git`** é opcional. Sem ele a execução cai para modo sequencial, sem
   worktrees — e a skill avisa em voz alta que está degradada, em vez de fingir
   que está tudo normal.
+- **Um agente** que leia arquivos, rode comandos e despache subagentes. Sem
+  despacho de subagente o Tier 2 não roda; o Tier 1 e todo o resto continuam
+  funcionando, e a skill avisa.
 
 Nada mais. Nenhuma dependência para instalar, nenhuma chave de API, nenhum
 serviço externo.
@@ -404,15 +428,20 @@ tocar, o log de bloqueios, e o consumo de tokens por sessão.
 
 Por que não custa nada: **tudo que aparece ali já está em disco**, porque a
 skill guarda estado em arquivo e não na sessão. O painel lê os mesmos arquivos
-que o agente escreve, e as métricas de token vêm das transcrições que o Claude
-Code já grava em `~/.claude/projects/`. Nenhuma chamada de API, nenhuma chave,
-nenhuma telemetria.
+que o agente escreve. Nenhuma chamada de API, nenhuma chave, nenhuma telemetria.
+
+As métricas de token vêm das transcrições que o agente já grava localmente. O
+Claude Code (`~/.claude/projects/`) é lido automaticamente; qualquer outro que
+escreva um JSON por turno com um objeto `usage` entra apontando
+`SDD_USAGE_DIR` pra pasta dele. Um agente que só exponha isso por API não é
+lido aqui — e o painel diz isso, em vez de fingir.
 
 | Recurso | Como funciona |
 |---|---|
 | **Vários projetos** | `--repo-root` é repetível; cada projeto vira uma aba com a contagem de tarefas abertas |
 | **Renomear sessão** | Clique numa linha da tabela de consumo. O rótulo vai pra `~/.claude/sdd-dashboard-names.json`, nunca pro seu repositório |
 | **Português e inglês** | Botão EN/PT-BR no cabeçalho, ou `--lang pt-BR`. Só a interface é traduzida — descrição de tarefa e nome de feature ficam no idioma em que você escreveu os artefatos |
+| **Vários agentes** | Claude Code é lido sozinho; outros entram por `SDD_USAGE_DIR` |
 | **Sinal de vida** | "última mudança há 12s — spec.md", lido do mtime dos arquivos |
 | **Tarefas mais recentes primeiro** | O marco mais novo no topo; `tasks.md` mantém a ordem de dependência no disco |
 

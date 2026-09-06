@@ -89,7 +89,9 @@ costs about 6,000 tokens (the gated `spec.md`, `references/artifact-design.md`,
 100k+ per turn, for every turn that follows. The reset pays for itself
 immediately and then keeps paying.
 
-**Neither command can be run by the agent — the human types them.** After
+**The agent cannot reset its own context — the human runs the command.**
+Name whatever their harness uses; in Claude Code that is `/clear` (drop
+everything) and `/compact` (summarize and keep the thread). After
 writing the `validation:` block on any artifact, get the real number first — the
 agent cannot read its own context size, so this reads the live transcript:
 
@@ -117,10 +119,10 @@ estimate rather than inventing one.
 
 Which one:
 
-- **`/clear`** at a phase boundary — spec done, design done, plan done. State
+- **A full reset** (`/clear` in Claude Code) at a phase boundary — spec done, design done, plan done. State
   detection (`SKILL.md` Step 1) rebuilds everything needed from disk, so nothing
   is lost. This is the default recommendation.
-- **`/compact`** mid-phase, when an interview is still open and the thread
+- **A compaction** (`/compact` in Claude Code) mid-phase, when an interview is still open and the thread
   matters more than the tokens. It costs a summarization pass and keeps some
   context, so it saves less than `/clear` — but it does not drop a conversation
   that is not finished.

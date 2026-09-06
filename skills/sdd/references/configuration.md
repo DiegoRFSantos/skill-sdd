@@ -7,7 +7,7 @@ each key falls back to asking.
 ```yaml
 # .specs/sdd.config.yml
 summary_preview: ask     # always | never | ask   — show the 15-line sketch in chat before authoring
-judge_model: sonnet      # any model the Agent tool accepts — which model Tier 2 judges run on
+judge_model: sonnet      # whatever name your harness's subagent dispatch takes — which model Tier 2 judges run on
 judge_depth: fast        # fast | full            — judge verbosity and round cap
 dashboard: off           # on | off               — the local progress page
 ```
@@ -15,7 +15,7 @@ dashboard: off           # on | off               — the local progress page
 | Key | Default when absent | Resolved by | Detail |
 |---|---|---|---|
 | `summary_preview` | ask the user, this artifact only | `references/summary-preview.md` | Only the chat preview is optional. `## 0. At a Glance` is a required section either way. |
-| `judge_model` | **ask** — never guessed | `references/quality-gate.md` | Unset, a judge inherits the session's model, usually the slowest available. |
+| `judge_model` | **ask** — never guessed | `references/quality-gate.md` | Unset, a judge inherits the session's model, usually the slowest available. Give it in whatever form your harness's subagent dispatch expects. |
 | `judge_depth` | **ask** — never guessed | `references/quality-gate.md` | `fast` caps at one re-judge and drops justification prose for criteria at full marks. Same rubric, same 90 bar. |
 | `dashboard` | off, and offered at most once per session | `references/dashboard.md` | `on` starts the server and gives the URL **once**. |
 

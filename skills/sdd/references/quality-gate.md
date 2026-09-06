@@ -49,8 +49,9 @@ the interviewing side; here it applies to grading instead.
 This is a hard rule, not a judgment call the orchestrating agent gets to
 make case by case:
 
-- Tier 2 MUST be dispatched via the `Agent` tool as a genuinely separate
-  subagent — never scored inline by the agent that wrote or edited the
+- Tier 2 MUST be dispatched as a genuinely separate subagent — whatever your
+  harness calls that (Claude Code: the `Agent` tool; other harnesses: their
+  subagent or sub-task mechanism) — never scored inline by the agent that wrote or edited the
   artifact, and never scored by re-reading the authoring conversation.
 - The judge receives **only**: the artifact under review, plus any artifact its
   rubric requires as context (a `design.md` review needs the `spec.md` it
@@ -251,7 +252,7 @@ the authoring rules are the thing to fix, not the cap.
 
 ## The evaluator subagent prompt template
 
-The literal prompt to pass to the `Agent` tool, dispatched on `judge_model`.
+The literal prompt to pass to the subagent, dispatched on `judge_model`.
 Fill in the placeholders; do not paraphrase the instructions away — the
 adversarial framing, the anti-length rule, and the per-criterion deficiency
 requirement are load-bearing.
@@ -390,8 +391,9 @@ Rules for the block:
 ## After the block is written, offer the reset
 
 The artifact is now durable and the authoring context is not needed to write
-the next one. Run `sdd_status.py --context` for the real number, then offer `/clear` (or
-`/compact` mid-phase) in one line **with the estimate attached**, per
+the next one. Run `sdd_status.py --context` for the real number, then offer a context reset
+in one line **with the estimate attached** — naming whatever command your
+harness uses (Claude Code: `/clear`, or `/compact` mid-phase), per
 `references/context-economy.md`, then stop. Once per boundary; if the human
 declines, carry on without mentioning it again.
 
