@@ -20,6 +20,106 @@ Ele nunca preenche a lacuna com um palpite plausível.
 
 ---
 
+## Como é usar
+
+Cinco cenários reais, do começo ao fim. Se você só tem um minuto, leia o
+primeiro — ele mostra o ciclo inteiro.
+
+### 1. Feature nova, do zero
+
+```
+Você: quero deixar o pessoal dividir a conta de um pedido em grupo
+```
+
+O que acontece:
+
+1. **Desafio antes de concordar.** *"Antes de aceitar: o problema é o pagamento
+   dividido, ou é o pedido ser cancelado quando alguém não paga?"*
+2. **discovery.md** — problema, alternativas descartadas, riscos aceitos,
+   ledger de perguntas em aberto (que precisa fechar antes de seguir).
+3. **Resumo de 15 linhas** → você aprova ou corrige. Ele vira o
+   `## 0. At a Glance` do artefato.
+4. **spec.md** — `BR-01..NN` e `AC-01..NN` em linhas de tabela, casos de borda,
+   matriz de rastreabilidade. Nenhum nome de tecnologia, nenhuma rota HTTP.
+5. **Portão** → uma linha: `spec.md — Tier 1 pass, Tier 2 94 PASS (1 rodada)`.
+   Junto vem a oferta de `/clear`, com quanto ela economiza.
+6. **design.md** → contratos com o símbolo e a assinatura exatos, fluxos com
+   falha parcial, timeouts com número (nunca "um valor razoável"), um diagrama
+   de sequência com as ramificações de erro, e o **§9 File Map**: todo arquivo
+   que a feature toca, pelo caminho literal.
+7. **test-catalog.md** → você assina os cenários que importam.
+8. **plan.md + tasks.md** → marcos entregáveis, DAG no nível de marco, e cada
+   tarefa com a tag `[files: ...]` dizendo exatamente onde ela pode escrever.
+   Antes disso, a skill pergunta qual modelo pra cada papel — **com uma
+   recomendação e uma justificativa por papel**, nunca em branco.
+9. **Handoff** → com o `tasks.md` aprovado, a skill te dá o comando pra abrir
+   uma sessão nova, em vez de implementar com a janela de contexto cheia da
+   entrevista.
+10. **Execução** → um worktree por stream, um subagente novo por tarefa, cada
+    um recebendo só os caminhos e símbolos da tarefa dele, e testes rodados de
+    verdade antes de qualquer `[x]`.
+
+### 2. Mudança pequena numa feature já pronta
+
+```
+Você: aumenta a janela de configuração da divisão de 15 pra 20 minutos
+```
+
+A skill checa os três critérios de elegibilidade **contra o arquivo**, não de
+memória: 1 arquivo, ~6 linhas, mexe no limiar de um `EC` que já existe, nenhuma
+tabela/tópico/integração nova. Elegível.
+
+Resultado: código alterado, `EC-03` atualizado na spec viva, `## 0. At a Glance`
+relido (e corrigido, se as 15 linhas ficaram mentirosas), `updated_at` novo,
+linha no changelog explicando **por que** foi fast-track, Tier 1 rodado, commit
+com tag `[fast-track]`.
+
+### 3. Bug
+
+```
+Você: tá deixando a soma das porcentagens passar de 100%
+```
+
+```
+Causa raiz    validateAllocation() usa <= quando a BR-02 diz < ;
+              soma de 100.5% passa
+Conserto      1 arquivo, 1 linha, + 1 teste de regressão
+Raio          só o caminho de submissão; nada mais chama essa função
+Classificação Defeito de código — a spec está certa, o código discorda
+Ids afetados  BR-02, AC-03
+
+Recomendo a via A (conserto direto). Mas a BR-02 é uma regra de
+dinheiro, então me diga: A, B (fast-track com nota na spec) ou C?
+```
+
+E aí ele **espera**. As três vias — conserto direto, fast-track e ciclo
+completo — estão detalhadas em [Quando algo quebra](#quando-algo-quebra).
+
+### 4. Sessão fria, retomando no meio
+
+```
+Você: continua de onde paramos
+```
+
+O estado mora no disco, não na memória da conversa. A skill relê
+`.specs/features/*/` com `grep` — sem abrir os artefatos — e responde em uma
+linha: *"payment-split: spec e design ativos, catálogo assinado, plano no marco
+M2, 9/16 tarefas feitas, Task 2.4 marcada `[/]` — vou checar se ela realmente
+começou antes de continuar."*
+
+### 5. Implementando um plano aprovado
+
+```
+Você: Execute the SDD plan at .specs/features/payment-split/tasks.md
+```
+
+Esse é o comando que a skill te entrega no handoff. Numa sessão nova, ela lê o
+`tasks.md`, confere os blocos `validation:` **sem re-rodar portão nenhum**, e
+começa a despachar tarefas — cada uma para um subagente novo, com os caminhos
+do `[files: ...]` e a fatia exata do design que aquela tarefa implementa.
+
+---
+
 ## Por que isso existe
 
 Todo mundo já viveu isto:
@@ -504,102 +604,6 @@ flowchart TD
 Mesmo quando você diz "só conserta" — isso escolhe a via A, e **não** é
 permissão para pular o teste de regressão nem para reescrever uma regra de
 negócio de passagem.
-
----
-
-## Exemplos de uso
-
-### 1. Feature nova, do zero
-
-```
-Você: quero deixar o pessoal dividir a conta de um pedido em grupo
-```
-
-O que acontece:
-
-1. **Desafio antes de concordar.** *"Antes de aceitar: o problema é o pagamento
-   dividido, ou é o pedido ser cancelado quando alguém não paga?"*
-2. **discovery.md** — problema, alternativas descartadas, riscos aceitos,
-   ledger de perguntas em aberto (que precisa fechar antes de seguir).
-3. **Resumo de 15 linhas** → você aprova ou corrige. Ele vira o
-   `## 0. At a Glance` do artefato.
-4. **spec.md** — `BR-01..NN` e `AC-01..NN` em linhas de tabela, casos de borda,
-   matriz de rastreabilidade. Nenhum nome de tecnologia, nenhuma rota HTTP.
-5. **Portão** → uma linha: `spec.md — Tier 1 pass, Tier 2 94 PASS (1 rodada)`.
-   Junto vem a oferta de `/clear`, com quanto ela economiza.
-6. **design.md** → contratos com o símbolo e a assinatura exatos, fluxos com
-   falha parcial, timeouts com número (nunca "um valor razoável"), um diagrama
-   de sequência com as ramificações de erro, e o **§9 File Map**: todo arquivo
-   que a feature toca, pelo caminho literal.
-7. **test-catalog.md** → você assina os cenários que importam.
-8. **plan.md + tasks.md** → marcos entregáveis, DAG no nível de marco, e cada
-   tarefa com a tag `[files: ...]` dizendo exatamente onde ela pode escrever.
-   Antes disso, a skill pergunta qual modelo pra cada papel — **com uma
-   recomendação e uma justificativa por papel**, nunca em branco.
-9. **Handoff** → com o `tasks.md` aprovado, a skill te dá o comando pra abrir
-   uma sessão nova, em vez de implementar com a janela de contexto cheia da
-   entrevista.
-10. **Execução** → um worktree por stream, um subagente novo por tarefa, cada
-    um recebendo só os caminhos e símbolos da tarefa dele, e testes rodados de
-    verdade antes de qualquer `[x]`.
-
-### 2. Mudança pequena numa feature já pronta
-
-```
-Você: aumenta a janela de configuração da divisão de 15 pra 20 minutos
-```
-
-A skill checa os três critérios de elegibilidade **contra o arquivo**, não de
-memória: 1 arquivo, ~6 linhas, mexe no limiar de um `EC` que já existe, nenhuma
-tabela/tópico/integração nova. Elegível.
-
-Resultado: código alterado, `EC-03` atualizado na spec viva, `## 0. At a Glance`
-relido (e corrigido, se as 15 linhas ficaram mentirosas), `updated_at` novo,
-linha no changelog explicando **por que** foi fast-track, Tier 1 rodado, commit
-com tag `[fast-track]`.
-
-### 3. Bug
-
-```
-Você: tá deixando a soma das porcentagens passar de 100%
-```
-
-```
-Causa raiz    validateAllocation() usa <= quando a BR-02 diz < ;
-              soma de 100.5% passa
-Conserto      1 arquivo, 1 linha, + 1 teste de regressão
-Raio          só o caminho de submissão; nada mais chama essa função
-Classificação Defeito de código — a spec está certa, o código discorda
-Ids afetados  BR-02, AC-03
-
-Recomendo a via A (conserto direto). Mas a BR-02 é uma regra de
-dinheiro, então me diga: A, B (fast-track com nota na spec) ou C?
-```
-
-E aí ele **espera**.
-
-### 4. Sessão fria, retomando no meio
-
-```
-Você: continua de onde paramos
-```
-
-O estado mora no disco, não na memória da conversa. A skill relê
-`.specs/features/*/` com `grep` — sem abrir os artefatos — e responde em uma
-linha: *"payment-split: spec e design ativos, catálogo assinado, plano no marco
-M2, 9/16 tarefas feitas, Task 2.4 marcada `[/]` — vou checar se ela realmente
-começou antes de continuar."*
-
-### 5. Implementando um plano aprovado
-
-```
-Você: Execute the SDD plan at .specs/features/payment-split/tasks.md
-```
-
-Esse é o comando que a skill te entrega no handoff. Numa sessão nova, ela lê o
-`tasks.md`, confere os blocos `validation:` **sem re-rodar portão nenhum**, e
-começa a despachar tarefas — cada uma para um subagente novo, com os caminhos
-do `[files: ...]` e a fatia exata do design que aquela tarefa implementa.
 
 ---
 
