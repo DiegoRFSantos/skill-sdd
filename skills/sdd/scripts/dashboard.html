@@ -92,6 +92,27 @@
   .legend .sw { display: inline-block; width: 8px; height: 8px; border-radius: 2px;
                 margin: 0 4px 0 12px; vertical-align: middle; }
   .legend .sw:first-child { margin-left: 0; }
+
+  .tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 18px;
+          border-bottom: 1px solid var(--line); padding-bottom: 10px; }
+  .tab { background: var(--chip); border: 1px solid transparent; color: var(--muted);
+         border-radius: 6px; padding: 5px 11px; cursor: pointer; font: inherit;
+         font-size: 13px; }
+  .tab:hover { color: var(--ink); }
+  .tab[aria-selected="true"] { background: var(--panel); border-color: var(--line);
+                               color: var(--ink); font-weight: 600; }
+  .tab .badge { color: var(--muted); font-weight: 400; margin-left: 6px; font-size: 12px; }
+  .label-cell { cursor: text; }
+  .label-cell:hover { text-decoration: underline dotted; text-underline-offset: 3px; }
+  .label-cell .ph { color: var(--idle); font-style: italic; }
+  .agent-tag { font-size: 11px; text-transform: uppercase; letter-spacing: .04em;
+               padding: 2px 7px; border-radius: 10px; background: var(--chip);
+               color: var(--muted); }
+  .agent-tag.claude { color: var(--accent); }
+  .agent-tag.devin { color: var(--run); }
+  .label-cell input { font: inherit; color: var(--ink); background: var(--bg);
+                      border: 1px solid var(--accent); border-radius: 4px;
+                      padding: 2px 6px; width: 15ch; }
 </style>
 </head>
 <body>
@@ -186,10 +207,20 @@ function renderFeature(f) {
 const fmt = (n) => n >= 1e6 ? (n / 1e6).toFixed(1) + "M"
                  : n >= 1e3 ? Math.round(n / 1e3) + "k" : String(n);
 
-function renderUsage(usage) {
-  if (!usage || !usage.length) return "";
+function renderUsage(usage, sources) {
+  const unset = (sources || []).filter((s) => !s.configured).map((s) => s.agent);
+  const hint = unset.length
+    ? `<p class="note">Not reading: ${esc(unset.join(", "))}. Point
+       <code>SDD_DEVIN_SESSIONS</code> at a session directory to include it.</p>` : "";
+  if (!usage || !usage.length) {
+    return `<h2>Token usage</h2><div class="panel"><p class="empty">No sessions
+      found yet.</p>${hint}</div>`;
+  }
   const rows = usage.map((s, i) => `<tr class="${i === 0 ? "now" : ""}">
-      <td><code>${esc(s.session)}</code>${i === 0 ? " &middot; latest" : ""}</td>
+      <td class="label-cell" data-session="${esc(s.session)}" title="click to rename">${
+        s.label ? esc(s.label) : `<span class="ph">${esc(s.session)}</span>`
+      }${i === 0 ? " &middot; latest" : ""}</td>
+      <td><span class="agent-tag ${esc(s.agent)}">${esc(s.agent)}</span></td>
       <td class="num">${s.turns}</td>
       <td class="num">${fmt(s.avg_context)}</td>
       <td class="num">${fmt(s.cache_read)}</td>
@@ -202,7 +233,7 @@ function renderUsage(usage) {
   return `<h2>Token usage</h2>
     <div class="panel scroll">
       <table class="cost">
-        <thead><tr><th>Session</th><th class="num">Turns</th><th class="num">Avg context</th>
+        <thead><tr><th>Session <span style="font-weight:400">(click to rename)</span></th><th>Agent</th><th class="num">Turns</th><th class="num">Avg context</th>
           <th class="num">Cache read</th><th class="num">Fresh in</th><th class="num">Out</th></tr></thead>
         <tbody>${rows}</tbody>
       </table>
@@ -220,27 +251,105 @@ function renderUsage(usage) {
         re-read every turn, so ${fmt(s0.avg_context)} &times; ${s0.turns} turns is where
         the cache-read total comes from. Cache reads bill at a fraction of fresh input;
         output is the priciest per token. Read from this project's local transcripts —
-        no agent tokens involved.</p>
+        no agent tokens involved.</p>${hint}
     </div>`;
 }
 
+let activeProject = 0;
+
+function renderTabs(projects) {
+  if (projects.length < 2) return "";
+  return `<div class="tabs" role="tablist">` + projects.map((p, i) => {
+    const open = p.features.reduce((n, f) =>
+      n + f.tasks.filter((t) => t.state !== "done").length, 0);
+    const badge = open ? `<span class="badge">${open} open</span>` : "";
+    return `<button class="tab" role="tab" data-i="${i}"
+            aria-selected="${i === activeProject}">${esc(p.repo)}${badge}</button>`;
+  }).join("") + `</div>`;
+}
+
 function render(data) {
-  document.getElementById("repo").textContent = `SDD Progress — ${data.repo}`;
-  const out = data.features.length
-    ? data.features.map(renderFeature).join("")
-    : `<p class="empty">No features under .specs/features/ yet.</p>`;
-  const adrs = data.adrs.length
-    ? `<h2>ADRs</h2><div class="panel"><ul>` + data.adrs.map((a) =>
+  const projects = data.projects || [];
+  if (activeProject >= projects.length) activeProject = 0;
+  const p = projects[activeProject];
+
+  document.getElementById("repo").textContent =
+    "SDD Progress" + (p ? ` — ${p.repo}` : "");
+
+  if (!p) {
+    document.getElementById("out").innerHTML =
+      `<p class="empty">No projects being watched.</p>`;
+    return;
+  }
+
+  const body = p.features.length
+    ? p.features.map(renderFeature).join("")
+    : `<p class="empty">No features under .specs/features/ in this project yet.</p>`;
+  const adrs = p.adrs.length
+    ? `<h2>ADRs</h2><div class="panel"><ul>` + p.adrs.map((a) =>
         `<li><code>${esc(a.id ?? a.file)}</code> — ${esc(a.status ?? "?")}</li>`).join("") +
       `</ul></div>` : "";
-  const events = data.events.length
-    ? `<h2>In flight</h2><div class="panel"><ul class="events">` + data.events.slice(-12).map((e) =>
+  const events = p.events.length
+    ? `<h2>In flight</h2><div class="panel"><ul class="events">` + p.events.slice(-12).map((e) =>
         `<li><code>${esc(e.at ?? "")}</code> ${esc(e.event ?? JSON.stringify(e))}</li>`).join("") +
       `</ul></div>` : "";
-  document.getElementById("out").innerHTML = out + adrs + events + renderUsage(data.usage);
-  const lc = data.last_change;
+
+  document.getElementById("out").innerHTML =
+    renderTabs(projects) + body + adrs + events + renderUsage(p.usage, p.sources);
+
+  const lc = p.last_change;
   document.getElementById("live").textContent = lc
     ? `last change ${lc.seconds_ago}s ago — ${lc.file}` : "";
+}
+
+// Switching projects and renaming a session are the only interactions on this
+// page, so they are delegated from the container rather than re-bound on every
+// render.
+document.getElementById("out").addEventListener("click", (ev) => {
+  const tab = ev.target.closest(".tab");
+  if (tab) {
+    activeProject = Number(tab.dataset.i);
+    lastSeen = null;              // force a redraw with the new selection
+    poll();
+    return;
+  }
+  const cell = ev.target.closest(".label-cell");
+  if (cell && !cell.querySelector("input")) startRename(cell);
+});
+
+function startRename(cell) {
+  const session = cell.dataset.session;
+  const current = cell.querySelector(".ph") ? "" : cell.textContent.split(" · ")[0].trim();
+  const input = document.createElement("input");
+  input.value = current;
+  input.placeholder = session;
+  input.maxLength = 80;
+  cell.textContent = "";
+  cell.appendChild(input);
+  input.focus();
+  input.select();
+
+  let settled = false;
+  const finish = async (save) => {
+    if (settled) return;
+    settled = true;
+    if (save) {
+      try {
+        await fetch("/rename", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ session, label: input.value.trim() }),
+        });
+      } catch (err) { /* the next poll will show the unchanged value */ }
+    }
+    lastSeen = null;              // pull the stored label back rather than guessing
+    poll();
+  };
+  input.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") finish(true);
+    if (e.key === "Escape") finish(false);
+  });
+  input.addEventListener("blur", () => finish(true));
 }
 
 // Re-render only when the state actually changed. Rebuilding the DOM on every

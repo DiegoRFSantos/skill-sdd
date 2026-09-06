@@ -382,7 +382,8 @@ Rules for the block:
 ## After the block is written, offer the reset
 
 The artifact is now durable and the authoring context is not needed to write
-the next one. Offer `/clear` (or `/compact` mid-phase) in one line, per
+the next one. Run `sdd_status.py --context` for the real number, then offer `/clear` (or
+`/compact` mid-phase) in one line **with the estimate attached**, per
 `references/context-economy.md`, then stop. Once per boundary; if the human
 declines, carry on without mentioning it again.
 

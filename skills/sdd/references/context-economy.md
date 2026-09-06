@@ -90,18 +90,30 @@ costs about 6,000 tokens (the gated `spec.md`, `references/artifact-design.md`,
 immediately and then keeps paying.
 
 **Neither command can be run by the agent — the human types them.** After
-writing the `validation:` block on any artifact, offer the reset in one line and
-stop:
+writing the `validation:` block on any artifact, get the real number first — the
+agent cannot read its own context size, so this reads the live transcript:
+
+```bash
+python3 ${CLAUDE_PLUGIN_ROOT}/skills/sdd/scripts/sdd_status.py --context --repo-root .
+```
+
+Then offer the reset in one line, **with the estimate attached**, and stop:
 
 ```
 spec.md — Tier 1 pass, Tier 2 94 PASS (1 round).
 
-Everything is on disk, so this is a good place to drop the context:
+Context is at ~221k/turn. Everything is on disk, so clearing here saves
+roughly 21.5M tokens over the next 100 turns (rebuild costs ~6k).
   /clear     then: "continue the SDD design for <feature>"
   /compact   if you would rather keep the thread
 
 Or say continue and I'll carry on as-is.
 ```
+
+**Always attach the number.** A recommendation without one is advice the human
+learns to skip; "this saves ~21M tokens" is a decision they can make in a
+second. If the transcript is unreadable, say the reset is available and skip the
+estimate rather than inventing one.
 
 Which one:
 

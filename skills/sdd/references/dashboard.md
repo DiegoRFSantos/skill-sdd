@@ -23,7 +23,23 @@ about it.
 python3 ${CLAUDE_PLUGIN_ROOT}/skills/sdd/scripts/sdd_status.py --serve --repo-root .
 ```
 
-Then open `http://127.0.0.1:4517`. `--port` changes the port. A server is
+Then open `http://127.0.0.1:4517`. `--port` changes the port.
+
+**Several projects at once.** `--repo-root` is repeatable, and the page gets a
+tab per project showing its open task count — working across projects and
+features simultaneously is the normal case, not something to run N copies for:
+
+```bash
+python3 .../sdd_status.py --serve --repo-root ~/work/api --repo-root ~/work/web
+```
+
+**Naming sessions.** Click a session row in the usage panel to label it
+("payment split spec", "the flaky-test hunt"). Labels are stored in
+`~/.claude/sdd-dashboard-names.json` — a viewing convenience only, so renaming
+never dirties a working tree or shows up in a diff.
+
+**What it costs the human's bill: nothing.** No network calls, no API keys, no
+telemetry. Every number comes from a file already on the machine. A server is
 needed rather than opening the file directly because `fetch()` from a `file://`
 page is blocked by CORS.
 
@@ -116,3 +132,10 @@ exists to cut.
 
 If the panel is empty, this repo has no transcripts under `~/.claude/projects/`
 yet — nothing is broken.
+
+**Other agents.** Any tool that writes one JSON object per turn to a local
+`*.jsonl`, with a `usage` object using Anthropic's field names
+(`input_tokens`, `cache_read_input_tokens`, `output_tokens`, ...), is read by
+pointing `SDD_DEVIN_SESSIONS` at its directory. This is deliberately
+file-only: a source that needs a network call and an API key is out of scope
+for this dashboard, whatever it would show.

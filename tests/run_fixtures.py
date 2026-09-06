@@ -120,10 +120,14 @@ def _check_status():
         return ["sdd_status.py did not emit valid JSON: %s" % exc]
 
     problems = []
-    if len(data["features"]) != 1:
-        problems.append("status: expected 1 feature, got %d" % len(data["features"]))
+    projects = data.get("projects")
+    if not projects:
+        return ["status: payload has no projects key"]
+    project = projects[0]
+    if len(project["features"]) != 1:
+        problems.append("status: expected 1 feature, got %d" % len(project["features"]))
         return problems
-    feature = data["features"][0]
+    feature = project["features"][0]
     if len(feature["tasks"]) != 16:
         problems.append("status: expected 16 tasks, got %d" % len(feature["tasks"]))
     if feature["milestone"] != "M1":
@@ -138,8 +142,10 @@ def _check_status():
     if not first["description"] or "[" in first["description"]:
         problems.append("status: task description should have its tags stripped, got %r"
                         % first["description"])
-    if not data["adrs"]:
+    if not project["adrs"]:
         problems.append("status: the golden ADR should be listed")
+    if not any(s["agent"] == "claude" for s in project.get("sources", [])):
+        problems.append("status: the claude usage source should always be listed")
     return problems
 
 

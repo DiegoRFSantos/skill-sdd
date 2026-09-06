@@ -68,7 +68,8 @@ it; `references/context-economy.md` has the rest and the measurements.
 - **Extract, do not `cat`.** `sdd_extract.py <file> --outline` to find the
   section, `--section N.N` or `--ids BR-01,AC-02` to take only it.
 - **Grep before you read.** State detection in Step 1 never reads an artifact.
-- **Offer a context reset after every gated artifact.** `/clear` at a phase
+- **Offer a context reset after every gated artifact**, with the saving
+  attached: `sdd_status.py --context` gives the number. `/clear` at a phase
   boundary, `/compact` mid-phase. You cannot run either — offer once, in one
   line, and accept the answer.
 
