@@ -20,6 +20,41 @@ Ele nunca preenche a lacuna com um palpite plausível.
 
 ---
 
+## Índice
+
+- [Como é usar](#como-é-usar)
+  - [1. Feature nova, do zero](#1-feature-nova-do-zero)
+  - [2. Mudança pequena numa feature já pronta](#2-mudança-pequena-numa-feature-já-pronta)
+  - [3. Bug](#3-bug)
+  - [4. Sessão fria, retomando no meio](#4-sessão-fria-retomando-no-meio)
+  - [5. Implementando um plano aprovado](#5-implementando-um-plano-aprovado)
+- [Por que isso existe](#por-que-isso-existe)
+- [Instalação](#instalação)
+  - [Qualquer agente (manual — funciona em todos)](#qualquer-agente-manual--funciona-em-todos)
+  - [Claude Code (marketplace)](#claude-code-marketplace)
+  - [Instalação manual (qualquer agente)](#instalação-manual-qualquer-agente)
+- [Requisitos](#requisitos)
+- [As três vias](#as-três-vias)
+- [O ciclo completo](#o-ciclo-completo)
+- [O resumo de 15 linhas](#o-resumo-de-15-linhas)
+- [O portão de qualidade, em dois níveis](#o-portão-de-qualidade-em-dois-níveis)
+- [Escolha de modelo por papel](#escolha-de-modelo-por-papel)
+- [FinOps — onde o token realmente vai](#finops--onde-o-token-realmente-vai)
+- [O painel de progresso](#o-painel-de-progresso)
+- [Configuração](#configuração)
+- [Quando algo quebra](#quando-algo-quebra)
+- [Mapa dos artefatos](#mapa-dos-artefatos)
+- [Ferramentas de linha de comando](#ferramentas-de-linha-de-comando)
+  - [Linter (Tier 1)](#linter-tier-1)
+  - [Extrator de seções](#extrator-de-seções)
+  - [Painel e custo](#painel-e-custo)
+  - [Testes](#testes)
+- [Elegibilidade do fast-track](#elegibilidade-do-fast-track)
+- [O que a skill nunca faz](#o-que-a-skill-nunca-faz)
+- [Licença](#licença)
+
+---
+
 ## Como é usar
 
 Cinco cenários reais, do começo ao fim. Se você só tem um minuto, leia o
