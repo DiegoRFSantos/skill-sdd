@@ -142,6 +142,7 @@ ships an unreviewed invariant.
 | New idea, or the user is unsure what they need | `references/discovery.md` | `discovery.md` |
 | Discovery resolved, no spec | `references/elicitation.md` + `references/artifact-spec.md` + `templates/spec.md` | `spec.md` |
 | Spec active, no design | `references/artifact-design.md` + `references/design-extensions.md` + `templates/design.md` | `design.md` |
+| A model must be chosen for any role | `references/model-selection.md` | a confirmed `allocated_agents` block |
 | A cross-cutting decision surfaced | `references/artifact-adr.md` + `templates/adr.md` | `.adrs/NNNN-slug.md` |
 | Design active, no catalog | `references/artifact-plan-tasks.md` + `templates/test-catalog.md` | `test-catalog.md` |
 | Catalog done, no plan | `references/artifact-plan-tasks.md` + `templates/plan.md` + `templates/tasks.md` | `plan.md`, `tasks.md` |
@@ -222,6 +223,11 @@ either way.
 - Dispatch more than one judge per artifact per round, or judge two artifacts
   at once.
 - Pick a judge model, or a `fast`/`full` depth, without asking.
+- Ask which model to use without first checking what the human can reach and
+  proposing one per role, each with a line of reasoning. A blank question makes
+  the human do the research.
+- Name a model id from memory — look it up (`claude-api` skill for Claude), and
+  never append a date suffix to an exact id.
 - Write a task line without a `[files: ...]` tag, or refer to a file or symbol
   by description when the design names it literally.
 - Ship a mermaid diagram over its node cap — drop it instead.

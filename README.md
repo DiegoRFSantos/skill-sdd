@@ -198,6 +198,34 @@ inútil.
 
 ---
 
+## Escolha de modelo por papel
+
+A skill **nunca** chuta um modelo, e também **nunca** te entrega a pergunta em
+branco. "Qual modelo pro papel de Coder?" faz você pesquisar — o oposto de
+recomendar. O procedimento está em `references/model-selection.md`:
+
+1. **Pergunta o que você alcança** (Claude por esta CLI, chave de API,
+   Bedrock/Vertex/Foundry, outro provedor) — depois de checar `AGENTS.md` e
+   `CLAUDE.md`, que podem já responder.
+2. **Consulta o que existe hoje**, em vez de responder de memória. Preço, id e
+   capacidade mudam mais rápido que qualquer arquivo desta skill.
+3. **Casa o papel com o risco dele**, que é a parte que não envelhece:
+
+| Papel | Risco dominante | Aponta para |
+|---|---|---|
+| Coder | Interação sutil entre regras que o teste não pega | Tier alto na lógica de domínio; tier médio serve bem pra scaffolding, DTO, migration |
+| Tester | Harness que passa sem exercitar a regra | Tier médio no volume; sobe quando o desenho do teste é a parte difícil |
+| Reviewer | Falso negativo — o trabalho dele é justamente não deixar passar | Tier alto. Roda poucas vezes, então custo quase não se move |
+| Evaluator (juiz) | Carimbar um artefato vago, ou inventar deficiência | Tier médio com effort alto. A rubrica dá a estrutura, e é o papel que mais roda — onde a escolha mexe mais na conta |
+
+4. **Propõe um modelo por papel, com uma linha de justificativa cada**, e só
+   escreve no `plan.md` depois que você confirmar.
+
+O `effort` é um segundo botão: um modelo médio em `high`/`xhigh` costuma ganhar
+de um modelo topo em `low`, por menos.
+
+---
+
 ## FinOps — onde o token realmente vai
 
 Medido numa sessão real desta skill: **330 turnos x ~206k de contexto = 66,5

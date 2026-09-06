@@ -195,6 +195,13 @@ this fixed order, stopping at the first source that applies:
    suggested role in one line, so the user can confirm or override it
    quickly rather than re-deriving the reasoning themselves.
 
+See `references/model-selection.md` for the full procedure: ask what the human
+can actually reach, look up what currently exists rather than answering from
+memory, match each role to its dominant failure mode, and propose a concrete
+model per role with one line of reasoning. **Never present the question as four
+blanks** — a bare "which model for the Coder role?" makes the human do the
+research, which is the opposite of recommending.
+
 Nothing is ever written into `plan.md`'s `allocated_agents` without the
 user's confirmation. The agent may propose a model per role; it may never
 decide on the user's behalf and silently commit that decision to the plan.

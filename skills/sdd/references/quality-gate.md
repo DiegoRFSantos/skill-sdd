@@ -209,6 +209,14 @@ answers:
    message, then offer to write the answers into `.specs/sdd.config.yml` so the
    question does not come back every feature.
 
+   **Ask with a recommendation attached, never as a blank.** Follow
+   `references/model-selection.md`: find out what they can reach, look up what
+   currently exists instead of answering from memory, and propose a specific
+   model with one line of reasoning. For the Evaluator role that reasoning is
+   usually: the rubric supplies the structure, so this rewards careful reading
+   over creativity, and it is the highest-frequency role — which makes it where
+   model choice moves the bill most.
+
 Judges are dispatched on `judge_model`. Left unresolved, a judge inherits
 whatever model the orchestrating session is running — usually the largest and
 slowest available, which is the single biggest reason a gate feels slow. There
