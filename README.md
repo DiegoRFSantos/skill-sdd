@@ -374,18 +374,14 @@ de um modelo topo em `low`, por menos.
 
 ## FinOps — onde o token realmente vai
 
-Medido numa sessão real desta skill: **330 turnos × ~206k de contexto = 66,5
-milhões de tokens de cache read, 98,8% de tudo que foi cobrado.** Entrada nova:
-0,7%. Saída: 0,4%.
-
 A regra que explica quase tudo:
 
 > **custo ≈ turnos × tamanho do contexto**
 
 Tudo que está no contexto é relido a cada turno seguinte. Ou seja: **ler um
-arquivo não é um custo único.** Um artefato de 2.400 tokens que entra no
-contexto no turno 50 de uma sessão de 330 custa 2.400 × 280 ≈ 672 mil tokens de
-cache read.
+arquivo não é um custo único.** Um artefato que entra no contexto cedo numa
+sessão longa é relido em cada turno que vem depois — e é aí que a conta cresce,
+não na leitura em si.
 
 O que a skill faz com isso, em ordem de impacto:
 
@@ -393,11 +389,11 @@ O que a skill faz com isso, em ordem de impacto:
    subagente é descartável, o da sessão principal não. O juiz do Tier 2 recebe
    o path do artefato, não o texto colado.
 2. **Extrai em vez de dar `cat`.** `sdd_extract.py design.md --section 3.1`
-   devolve 485 caracteres contra os 7.048 do arquivo — 14× menos, e essa
-   economia se repete a cada turno.
-3. **Oferece `/clear` depois de cada artefato aprovado, com o número junto.**
-   Não "considere limpar o contexto", e sim *"limpar aqui economiza ~21,5M
-   tokens nos próximos 100 turnos; reconstruir custa ~6k"*.
+   devolve uma fatia no lugar do arquivo inteiro — e essa economia se repete a
+   cada turno.
+3. **Oferece limpar o contexto depois de cada artefato aprovado, com o número
+   junto.** Não "considere limpar o contexto", e sim quanto isso economiza nos
+   próximos turnos e quanto custa reconstruir — medido na hora, na sua sessão.
 4. **Passa o bastão antes de implementar.** Com o `tasks.md` aprovado, a skill
    te dá o comando pra abrir uma sessão nova em vez de codar com a janela cheia
    da entrevista.
@@ -405,11 +401,15 @@ O que a skill faz com isso, em ordem de impacto:
 
 O que **não** funciona, e a skill diz isso na cara: comprimir artefato (o
 agente precisa expandir pra ler, então o texto inteiro entra no contexto do
-mesmo jeito) e encurtar o que você escreve (tudo que um humano digitou numa
-sessão inteira deu 3.389 tokens — 0,005% do total; um mal-entendido custa
-sessenta vezes isso).
+mesmo jeito) e encurtar o que você escreve (o que um humano digita é uma fração
+irrelevante do total; um mal-entendido custa muito mais do que qualquer palavra
+economizada).
 
-Detalhes e as medições em `references/context-economy.md`.
+Quer os números da **sua** sessão, não os de um exemplo? O painel mostra turnos,
+contexto médio, cache read, entrada nova e saída por sessão — e
+`sdd_status.py --context` diz quanto um reset economizaria agora.
+
+As regras completas em `references/context-economy.md`.
 
 ---
 
