@@ -38,6 +38,19 @@ python3 .../sdd_status.py --serve --repo-root ~/work/api --repo-root ~/work/web
 `~/.claude/sdd-dashboard-names.json` — a viewing convenience only, so renaming
 never dirties a working tree or shows up in a diff.
 
+**Language.** The page ships English and Brazilian Portuguese. `--lang pt-BR`
+sets the default; the EN/PT-BR toggle in the header overrides it per browser and
+persists in `localStorage`. Only the UI chrome is translated — task
+descriptions, blocker notes and feature names stay in whatever language the
+artifacts were written in, because translating a human's own artifact text would
+be both wrong and impossible.
+
+**Task order is newest first.** The most recent milestone sits at the top and
+Task 1.1 at the bottom. In plan order, a feature mid-execution buries the live
+edge under every task already finished, which is the opposite of what a progress
+view is for. `tasks.md` keeps dependency order on disk; only the display
+reverses.
+
 **What it costs the human's bill: nothing.** No network calls, no API keys, no
 telemetry. Every number comes from a file already on the machine. A server is
 needed rather than opening the file directly because `fetch()` from a `file://`

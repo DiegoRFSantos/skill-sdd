@@ -363,6 +363,7 @@ def collect(repo_roots):
 
 class Handler(BaseHTTPRequestHandler):
     repo_roots = [Path(".")]
+    lang = "en"
 
     def do_POST(self):  # noqa: N802 - BaseHTTPRequestHandler's interface
         """Rename a session. Labels are local to this machine and never touch a repo."""
@@ -384,7 +385,9 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_GET(self):  # noqa: N802 - BaseHTTPRequestHandler's interface
         if self.path.startswith("/status.json"):
-            payload = json.dumps(collect(self.repo_roots)).encode("utf-8")
+            state = collect(self.repo_roots)
+            state["lang"] = self.lang
+            payload = json.dumps(state).encode("utf-8")
             self._send(200, "application/json", payload)
         elif self.path in ("/", "/index.html", "/dashboard.html"):
             if not DASHBOARD.exists():
@@ -442,6 +445,8 @@ def main(argv=None):
     parser = argparse.ArgumentParser(description="SDD progress dashboard")
     parser.add_argument("--repo-root", action="append", default=None,
                         help="repeatable; watch several projects at once")
+    parser.add_argument("--lang", choices=("en", "pt-BR"), default="en",
+                        help="dashboard language; the page also has a toggle")
     parser.add_argument("--context", action="store_true",
                         help="print this project's current context size and what a reset saves")
     parser.add_argument("--serve", action="store_true")
@@ -458,6 +463,7 @@ def main(argv=None):
         return 0
 
     Handler.repo_roots = [Path(r).resolve() for r in roots]
+    Handler.lang = args.lang
     server = HTTPServer(("127.0.0.1", args.port), Handler)
     print("SDD dashboard: http://127.0.0.1:%d  (ctrl-c to stop)" % args.port)
     for root in Handler.repo_roots:

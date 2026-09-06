@@ -76,6 +76,12 @@
          background: var(--done); margin-right: 6px; vertical-align: middle; }
   .stale .dot { background: var(--block); }
   footer { margin-top: 26px; color: var(--muted); font-size: 12px; }
+  .langs { float: right; }
+  .lang-btn { background: none; border: 1px solid var(--line); color: var(--muted);
+              font: inherit; font-size: 11px; padding: 1px 7px; cursor: pointer; }
+  .lang-btn:first-child { border-radius: 4px 0 0 4px; }
+  .lang-btn:last-child { border-radius: 0 4px 4px 0; border-left: 0; }
+  .lang-btn[aria-selected="true"] { background: var(--chip); color: var(--ink); font-weight: 600; }
 
   .num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
   .cost td, .cost th { font-size: 13px; }
@@ -117,13 +123,81 @@
 </head>
 <body>
 <h1 id="repo">SDD Progress</h1>
-<div class="sub"><span class="dot"></span><span id="tick">connecting…</span>
-  <span id="live" style="margin-left:12px"></span></div>
+<div class="sub"><span class="dot"></span><span id="tick"></span>
+  <span id="live" style="margin-left:12px"></span>
+  <span class="langs">
+    <button class="lang-btn" data-lang="en">EN</button><button class="lang-btn" data-lang="pt-BR">PT-BR</button>
+  </span></div>
 <main id="out"></main>
-<footer>Derived from disk — <code>tasks.md</code> marks, frontmatter, and each artifact's
-<code>validation:</code> block. Nothing here is reported by the agent.</footer>
+<footer id="foot"></footer>
 
 <script>
+// UI chrome is translated; artifact content is not. A task description, a
+// blocker note, a feature name — those are whatever language the human wrote
+// their artifacts in, and translating them would be both wrong and impossible.
+const STRINGS = {
+  en: {
+    title: "SDD Progress", connecting: "connecting…", updated: "updated",
+    lastChange: (n, f) => `last change ${n}s ago — ${f}`,
+    down: "server not responding — is sdd_status.py --serve still running?",
+    notStarted: "not started", noRubric: "no rubric", lines: "lines",
+    tasks: "Tasks", blockers: "Blockers", adrs: "ADRs", inFlight: "In flight",
+    usage: "Token usage", milestone: "milestone", declared: "declared",
+    thTask: "Task", thWhat: "What", thAgent: "Agent", thSession: "Session",
+    thTurns: "Turns", thContext: "Avg context", thRead: "Cache read",
+    thFresh: "Fresh in", thOut: "Out",
+    rename: "click to rename", latest: "latest", isBlocked: "is blocked",
+    noProjects: "No projects being watched.",
+    noFeatures: "No features under .specs/features/ in this project yet.",
+    noTasks: "No tasks yet.", noSessions: "No sessions found yet.",
+    open: "open",
+    notReading: (a) => `Not reading: ${a}. Point SDD_DEVIN_SESSIONS at a session directory to include it.`,
+    costNote: (ctx, turns) => `Cost tracks <b>turns &times; context</b>: everything in context is
+      re-read every turn, so ${ctx} &times; ${turns} turns is where the cache-read total comes
+      from. Cache reads bill at a fraction of fresh input; output is the priciest per token.
+      Read from this project's local transcripts — no agent tokens involved.`,
+    footer: `Derived from disk — <code>tasks.md</code> marks, frontmatter, and each artifact's
+      <code>validation:</code> block. Nothing here is reported by the agent.`,
+    legendRead: "cache read", legendFresh: "fresh input", legendOut: "output",
+  },
+  "pt-BR": {
+    title: "Progresso SDD", connecting: "conectando…", updated: "atualizado",
+    lastChange: (n, f) => `última mudança há ${n}s — ${f}`,
+    down: "servidor não responde — o sdd_status.py --serve ainda está rodando?",
+    notStarted: "não iniciado", noRubric: "sem rubrica", lines: "linhas",
+    tasks: "Tarefas", blockers: "Bloqueios", adrs: "ADRs", inFlight: "Em andamento",
+    usage: "Consumo de tokens", milestone: "marco", declared: "declarado",
+    thTask: "Tarefa", thWhat: "O quê", thAgent: "Agente", thSession: "Sessão",
+    thTurns: "Turnos", thContext: "Contexto médio", thRead: "Leitura de cache",
+    thFresh: "Entrada nova", thOut: "Saída",
+    rename: "clique para renomear", latest: "mais recente", isBlocked: "está bloqueada",
+    noProjects: "Nenhum projeto sendo acompanhado.",
+    noFeatures: "Nenhuma feature em .specs/features/ neste projeto ainda.",
+    noTasks: "Nenhuma tarefa ainda.", noSessions: "Nenhuma sessão encontrada ainda.",
+    open: "abertas",
+    notReading: (a) => `Não está lendo: ${a}. Aponte SDD_DEVIN_SESSIONS para um diretório de sessões para incluir.`,
+    costNote: (ctx, turns) => `O custo é <b>turnos &times; contexto</b>: tudo que está no contexto
+      é relido a cada turno, então ${ctx} &times; ${turns} turnos é de onde vem o total de leitura
+      de cache. Leitura de cache custa uma fração da entrada nova; a saída é a mais cara por token.
+      Lido das transcrições locais deste projeto — nenhum token de agente envolvido.`,
+    footer: `Derivado do disco — marcas do <code>tasks.md</code>, frontmatter e o bloco
+      <code>validation:</code> de cada artefato. Nada aqui é reportado pelo agente.`,
+    legendRead: "leitura de cache", legendFresh: "entrada nova", legendOut: "saída",
+  },
+};
+
+let lang = (() => {
+  try { return localStorage.getItem("sdd-lang") || null; } catch (e) { return null; }
+})();
+const T = () => STRINGS[lang] || STRINGS.en;
+
+function setLang(next) {
+  lang = next;
+  try { localStorage.setItem("sdd-lang", next); } catch (e) { /* private window */ }
+  lastSeen = null;
+  poll();
+}
+
 const MARKS = { done: "×", in_progress: "›", blocked: "!", pending: "·" };
 const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) =>
   ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
@@ -140,7 +214,7 @@ function renderPhases(phases) {
   return `<div class="pipeline">` + phases.map((p) => {
     if (!p.exists) {
       return `<div class="phase"><div class="name">${esc(p.phase)}</div>
-              <div class="meta">not started</div></div>`;
+              <div class="meta">${esc(T().notStarted)}</div></div>`;
     }
     const verdict = p.tier2_verdict;
     let score = "";
@@ -149,9 +223,9 @@ function renderPhases(phases) {
       const depth = p.judge_depth ? ` ${esc(p.judge_depth)}` : "";
       score = `<span class="score ${cls}">${esc(p.tier2_score)}</span> ${esc(verdict)}${depth}`;
     } else if (verdict === "n/a") {
-      score = "no rubric";
+      score = esc(T().noRubric);
     }
-    const lines = p.lines ? ` &middot; ${p.lines} lines` : "";
+    const lines = p.lines ? ` &middot; ${p.lines} ${esc(T().lines)}` : "";
     return `<div class="phase ${phaseClass(p)}">
       <div class="name">${esc(p.phase)}</div>
       <div class="meta">${esc(p.status ?? "—")}${lines}</div>
@@ -161,13 +235,17 @@ function renderPhases(phases) {
 }
 
 function renderTasks(tasks) {
-  if (!tasks.length) return `<p class="empty">No tasks yet.</p>`;
+  if (!tasks.length) return `<p class="empty">${esc(T().noTasks)}</p>`;
+  // Newest first: the work that just happened, and the work about to happen, sit
+  // at the top. In plan order a mid-execution feature buries the live edge under
+  // every task already finished, which is the opposite of what a progress view
+  // is for. tasks.md keeps dependency order on disk; only the display reverses.
   let last = null;
-  const rows = tasks.map((t) => {
+  const rows = tasks.slice().reverse().map((t) => {
     let head = "";
     if (t.milestone !== last) {
       last = t.milestone;
-      head = `<tr class="mstone"><td colspan="4">${esc(t.milestone ?? "Tasks")}</td></tr>`;
+      head = `<tr class="mstone"><td colspan="4">${esc(t.milestone ?? T().tasks)}</td></tr>`;
     }
     const files = t.files.length
       ? `<span class="files">${esc(t.files.join("  "))}</span>` : "";
@@ -179,7 +257,7 @@ function renderTasks(tasks) {
     </tr>`;
   }).join("");
   return `<div class="panel scroll"><table>
-    <thead><tr><th></th><th>Task</th><th>What</th><th>Agent</th></tr></thead>
+    <thead><tr><th></th><th>${esc(T().thTask)}</th><th>${esc(T().thWhat)}</th><th>${esc(T().thAgent)}</th></tr></thead>
     <tbody>${rows}</tbody></table></div>`;
 }
 
@@ -191,15 +269,15 @@ function renderFeature(f) {
     <h2>${esc(f.name)}</h2>
     ${renderPhases(f.phases)}
     ${f.tasks.length ? `<div class="sub" style="margin:14px 0 0">
-        milestone ${esc(f.milestone ?? "—")} &middot; ${done}/${f.tasks.length} tasks
-        ${f.progress ? `&middot; declared ${esc(f.progress)}` : ""}
+        ${esc(T().milestone)} ${esc(f.milestone ?? "—")} &middot; ${done}/${f.tasks.length} ${esc(T().tasks.toLowerCase())}
+        ${f.progress ? `&middot; ${esc(T().declared)} ${esc(f.progress)}` : ""}
         <div class="bar"><i style="width:${pct}%"></i></div>
       </div>` : ""}
-    <h2>Tasks</h2>
+    <h2>${esc(T().tasks)}</h2>
     ${renderTasks(f.tasks)}
-    ${blocked.length || f.blockers.length ? `<h2>Blockers</h2>
+    ${blocked.length || f.blockers.length ? `<h2>${esc(T().blockers)}</h2>
       <div class="panel"><ul class="blockers">
-        ${blocked.map((t) => `<li><code>${esc(t.id)}</code> is blocked</li>`).join("")}
+        ${blocked.map((t) => `<li><code>${esc(t.id)}</code> ${esc(T().isBlocked)}</li>`).join("")}
         ${f.blockers.map((b) => `<li>${esc(b)}</li>`).join("")}
       </ul></div>` : ""}`;
 }
@@ -210,16 +288,14 @@ const fmt = (n) => n >= 1e6 ? (n / 1e6).toFixed(1) + "M"
 function renderUsage(usage, sources) {
   const unset = (sources || []).filter((s) => !s.configured).map((s) => s.agent);
   const hint = unset.length
-    ? `<p class="note">Not reading: ${esc(unset.join(", "))}. Point
-       <code>SDD_DEVIN_SESSIONS</code> at a session directory to include it.</p>` : "";
+    ? `<p class="note">${esc(T().notReading(unset.join(", ")))}</p>` : "";
   if (!usage || !usage.length) {
-    return `<h2>Token usage</h2><div class="panel"><p class="empty">No sessions
-      found yet.</p>${hint}</div>`;
+    return `<h2>${esc(T().usage)}</h2><div class="panel"><p class="empty">${esc(T().noSessions)}</p>${hint}</div>`;
   }
   const rows = usage.map((s, i) => `<tr class="${i === 0 ? "now" : ""}">
       <td class="label-cell" data-session="${esc(s.session)}" title="click to rename">${
         s.label ? esc(s.label) : `<span class="ph">${esc(s.session)}</span>`
-      }${i === 0 ? " &middot; latest" : ""}</td>
+      }${i === 0 ? " &middot; " + esc(T().latest) : ""}</td>
       <td><span class="agent-tag ${esc(s.agent)}">${esc(s.agent)}</span></td>
       <td class="num">${s.turns}</td>
       <td class="num">${fmt(s.avg_context)}</td>
@@ -230,11 +306,11 @@ function renderUsage(usage, sources) {
   const s0 = usage[0];
   const total = s0.cache_read + s0.cache_write + s0.input + s0.output || 1;
   const pct = (n) => (100 * n / total).toFixed(1) + "%";
-  return `<h2>Token usage</h2>
+  return `<h2>${esc(T().usage)}</h2>
     <div class="panel scroll">
       <table class="cost">
-        <thead><tr><th>Session <span style="font-weight:400">(click to rename)</span></th><th>Agent</th><th class="num">Turns</th><th class="num">Avg context</th>
-          <th class="num">Cache read</th><th class="num">Fresh in</th><th class="num">Out</th></tr></thead>
+        <thead><tr><th>${esc(T().thSession)} <span style="font-weight:400">(${esc(T().rename)})</span></th><th>${esc(T().thAgent)}</th><th class="num">${esc(T().thTurns)}</th><th class="num">${esc(T().thContext)}</th>
+          <th class="num">${esc(T().thRead)}</th><th class="num">${esc(T().thFresh)}</th><th class="num">${esc(T().thOut)}</th></tr></thead>
         <tbody>${rows}</tbody>
       </table>
       <div class="stack">
@@ -243,15 +319,11 @@ function renderUsage(usage, sources) {
         <i class="k-out" style="width:${pct(s0.output)}"></i>
       </div>
       <div class="legend">
-        <span class="sw k-read"></span>cache read ${pct(s0.cache_read)}
-        <span class="sw k-write"></span>fresh input ${pct(s0.cache_write + s0.input)}
-        <span class="sw k-out"></span>output ${pct(s0.output)}
+        <span class="sw k-read"></span>${esc(T().legendRead)} ${pct(s0.cache_read)}
+        <span class="sw k-write"></span>${esc(T().legendFresh)} ${pct(s0.cache_write + s0.input)}
+        <span class="sw k-out"></span>${esc(T().legendOut)} ${pct(s0.output)}
       </div>
-      <p class="note">Cost tracks <b>turns &times; context</b>: everything in context is
-        re-read every turn, so ${fmt(s0.avg_context)} &times; ${s0.turns} turns is where
-        the cache-read total comes from. Cache reads bill at a fraction of fresh input;
-        output is the priciest per token. Read from this project's local transcripts —
-        no agent tokens involved.</p>${hint}
+      <p class="note">${T().costNote(fmt(s0.avg_context), s0.turns)}</p>${hint}
     </div>`;
 }
 
@@ -262,35 +334,40 @@ function renderTabs(projects) {
   return `<div class="tabs" role="tablist">` + projects.map((p, i) => {
     const open = p.features.reduce((n, f) =>
       n + f.tasks.filter((t) => t.state !== "done").length, 0);
-    const badge = open ? `<span class="badge">${open} open</span>` : "";
+    const badge = open ? `<span class="badge">${open} ${esc(T().open)}</span>` : "";
     return `<button class="tab" role="tab" data-i="${i}"
             aria-selected="${i === activeProject}">${esc(p.repo)}${badge}</button>`;
   }).join("") + `</div>`;
 }
 
 function render(data) {
+  // The viewer's own choice wins; the --lang flag is only the default.
+  if (lang === null && data.lang) lang = data.lang;
   const projects = data.projects || [];
   if (activeProject >= projects.length) activeProject = 0;
   const p = projects[activeProject];
 
   document.getElementById("repo").textContent =
-    "SDD Progress" + (p ? ` — ${p.repo}` : "");
+    T().title + (p ? ` — ${p.repo}` : "");
+  document.getElementById("foot").innerHTML = T().footer;
+  document.querySelectorAll(".lang-btn").forEach((b) =>
+    b.setAttribute("aria-selected", String(b.dataset.lang === (lang || "en"))));
 
   if (!p) {
     document.getElementById("out").innerHTML =
-      `<p class="empty">No projects being watched.</p>`;
+      `<p class="empty">${esc(T().noProjects)}</p>`;
     return;
   }
 
   const body = p.features.length
     ? p.features.map(renderFeature).join("")
-    : `<p class="empty">No features under .specs/features/ in this project yet.</p>`;
+    : `<p class="empty">${esc(T().noFeatures)}</p>`;
   const adrs = p.adrs.length
-    ? `<h2>ADRs</h2><div class="panel"><ul>` + p.adrs.map((a) =>
+    ? `<h2>${esc(T().adrs)}</h2><div class="panel"><ul>` + p.adrs.map((a) =>
         `<li><code>${esc(a.id ?? a.file)}</code> — ${esc(a.status ?? "?")}</li>`).join("") +
       `</ul></div>` : "";
   const events = p.events.length
-    ? `<h2>In flight</h2><div class="panel"><ul class="events">` + p.events.slice(-12).map((e) =>
+    ? `<h2>${esc(T().inFlight)}</h2><div class="panel"><ul class="events">` + p.events.slice(-12).map((e) =>
         `<li><code>${esc(e.at ?? "")}</code> ${esc(e.event ?? JSON.stringify(e))}</li>`).join("") +
       `</ul></div>` : "";
 
@@ -299,12 +376,17 @@ function render(data) {
 
   const lc = p.last_change;
   document.getElementById("live").textContent = lc
-    ? `last change ${lc.seconds_ago}s ago — ${lc.file}` : "";
+    ? T().lastChange(lc.seconds_ago, lc.file) : "";
 }
 
 // Switching projects and renaming a session are the only interactions on this
 // page, so they are delegated from the container rather than re-bound on every
 // render.
+document.querySelector(".langs").addEventListener("click", (ev) => {
+  const btn = ev.target.closest(".lang-btn");
+  if (btn) setLang(btn.dataset.lang);
+});
+
 document.getElementById("out").addEventListener("click", (ev) => {
   const tab = ev.target.closest(".tab");
   if (tab) {
@@ -367,12 +449,12 @@ async function poll() {
     if (body !== lastSeen) {
       lastSeen = body;
       render(JSON.parse(body));
-      tick.textContent = "updated " + new Date().toLocaleTimeString();
+      tick.textContent = T().updated + " " + new Date().toLocaleTimeString();
     }
     sub.classList.remove("stale");
   } catch (err) {
     sub.classList.add("stale");
-    tick.textContent = "server not responding — is sdd_status.py --serve still running?";
+    tick.textContent = T().down;
   }
 }
 poll();
