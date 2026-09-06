@@ -106,6 +106,7 @@ def _check_status():
     """
     script = ROOT / "skills/sdd/scripts/sdd_status.py"
     golden = ROOT / "tests/golden/payment-split"
+    design = golden / ".specs/features/payment-split/design.md"
     if not script.exists():
         return ["sdd_status.py is missing"]
     proc = subprocess.run(
@@ -142,6 +143,24 @@ def _check_status():
     if not first["description"] or "[" in first["description"]:
         problems.append("status: task description should have its tags stripped, got %r"
                         % first["description"])
+    # Milestone grouping must not depend on the English word "Milestone" —
+    # only the Blocker Log heading is linted verbatim, so every other heading in
+    # tasks.md is free-form and may be written in any language.
+    if any(t["milestone"] is None for t in feature["tasks"]):
+        problems.append("status: some tasks have no milestone grouping")
+    translated = design.parent / "tasks.md"
+    text = translated.read_text().replace("## Milestone 1", "## Marco 1")
+    tmp = ROOT / "tests" / ".tmp-i18n-tasks.md"
+    tmp.write_text(text)
+    try:
+        got = subprocess.run(
+            [sys.executable, str(script), "--json", "--repo-root", str(golden)],
+            capture_output=True, text=True)
+        if got.returncode != 0:
+            problems.append("status: failed after a renamed milestone heading")
+    finally:
+        tmp.unlink(missing_ok=True)
+
     if not project["adrs"]:
         problems.append("status: the golden ADR should be listed")
     if not any(s["agent"] == "claude" for s in project.get("sources", [])):

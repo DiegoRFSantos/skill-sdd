@@ -115,8 +115,14 @@ def _feature_state(feature_dir):
         feature["progress"] = fm.get("progress")
         milestone = None
         for line in text.split("\n"):
-            if line.startswith("## Milestone"):
-                milestone = line[3:].strip()
+            # Any `## ` heading groups the tasks under it. Only the Blocker Log
+            # heading is linted verbatim in tasks.md; every other heading is
+            # free-form, which means it can be written in any language. Matching
+            # the literal word "Milestone" silently dropped the grouping for
+            # anyone whose artifacts are not in English.
+            if line.startswith("## "):
+                heading = line[3:].strip()
+                milestone = None if heading.startswith(BLOCKER_HEADING[3:]) else heading
             for task in _parse_tasks(line):
                 agent = AGENT_TAG.search(task["rest"])
                 files = FILES_TAG.search(task["rest"])
@@ -147,9 +153,12 @@ def _strip_tags(rest):
     return out and "".join(out).replace("`", "").strip() or ""
 
 
+BLOCKER_HEADING = "## Execution Scratchpad & Blocker Log"
+
+
 def _blocker_log(text):
     """Non-empty lines under the Execution Scratchpad heading, minus the boilerplate."""
-    heading = "## Execution Scratchpad & Blocker Log"
+    heading = BLOCKER_HEADING
     if heading not in text:
         return []
     body = text.split(heading, 1)[1]
