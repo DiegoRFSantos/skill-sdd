@@ -77,3 +77,36 @@ catching it there.
       Traceability Matrix.
 - [ ] §10 Open Questions has no rows before requesting `status: active` —
       an active spec cannot carry an unresolved question.
+
+
+## Written to pass
+
+Every criterion the Tier 2 judge scores is a rule you apply **while writing**,
+not a surprise waiting at the gate. Applied here, the judge confirms rather
+than corrects — which is what makes the one-round cap in
+`references/quality-gate.md`'s fast lane affordable rather than punishing.
+
+- **Every business rule names a checkable condition.** A threshold, a
+  comparison, an enumerated set. Write `sum(allocations) <= 100`, not "totals
+  are handled correctly." If you cannot state the condition, you have not
+  finished the interview — go back to `references/elicitation.md` and ask.
+  This is about how the rule is *written*; challenging whether the feature
+  should exist at all already happened in `references/discovery.md`.
+- **Every acceptance criterion proves exactly one business rule** and has a
+  binary outcome. Two rules in one criterion means neither is provable alone.
+- **Every edge case names a boundary, a failure, a concurrency window, or
+  malformed input.** If the trigger is a normal user doing a normal thing, it
+  is an acceptance criterion wearing a costume.
+- **Every non-goal names the adjacent scope it fences off and why.** "Not
+  doing multi-currency" is not a non-goal; "not doing multi-currency — no
+  reported demand, and it adds conversion rules this capability does not need
+  yet" is.
+- **No implementation leaks.** No tech stack, table names, endpoints, library
+  names. The linter catches the obvious ones; it does not catch "we will cache
+  this."
+- **Every BR and EC id appears in the traceability matrix**, mapped to an AC
+  or to a named, explicit gap. An id in neither place is an orphan.
+- **Tables are the default; prose is the exception.** One row per rule, per
+  criterion, per edge case. Add a prose block only when a rule's nuance
+  genuinely does not fit a row — and the judge is told explicitly that a dense
+  row scores full marks, so brevity costs nothing.

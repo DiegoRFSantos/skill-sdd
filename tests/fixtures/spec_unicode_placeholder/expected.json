@@ -1,9 +1,1 @@
-[
-  {
-    "file": "spec.md",
-    "rule_id": "PLACEHOLDER_TODO",
-    "severity": "blocker",
-    "line": 14,
-    "message": "placeholder 'TODO' is a hard blocker"
-  }
-]
+[{"file": "spec.md", "rule_id": "PLACEHOLDER_TODO", "severity": "blocker", "line": 25, "message": "placeholder 'TODO' is a hard blocker"}]

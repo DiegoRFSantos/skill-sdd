@@ -1,0 +1,1 @@
+[{"file": "spec.md", "rule_id": "LINE_BUDGET", "severity": "review", "line": 1, "message": "230 lines against a budget of 200; trim, or say why it needs the room"}]

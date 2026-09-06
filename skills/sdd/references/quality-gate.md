@@ -8,7 +8,7 @@ shape, required sections, forbidden patterns, cross-references that resolve,
 acyclic task DAGs, empty discovery ledgers, symmetric ADR supersede pointers,
 a declared coverage threshold. **Tier 2** is this file: a semantic judge that
 reads a Tier-1-clean artifact and scores it against a fixed rubric for the
-things no linter can see — a business rule so vague it can't be falsified, a
+things no linter can see — a business rule too vague to check, a
 design that never mentions what happens when a call fails, an ADR whose
 "alternatives" are straw men, a plan whose milestones are just equal-sized
 chunks of work.
@@ -21,13 +21,21 @@ Tier 1 pass, and only then spend a Tier 2 pass on it.
 
 ## What the gate does not apply to
 
-The summary preview from `references/summary-preview.md` is not an artifact
-and is never gated — not Tier 1, not Tier 2, not "quickly, just to check."
-It has no frontmatter and no required sections, so Tier 1 has nothing to
-check; and a rubric written for a 300-line contract scores a 15-line sketch
-as catastrophically incomplete, which is true and useless. The human's
-approval of the preview is the entire gate for that step. The gate below
-applies to the full artifact the preview precedes.
+The 15-line summary from `references/summary-preview.md` is never judged, in
+either of the two places it appears — not Tier 1, not Tier 2, not "quickly,
+just to check."
+
+- **The chat preview** has no frontmatter and no sections, so Tier 1 has
+  nothing to check and Tier 2 has nothing to score.
+- **`## 0. At a Glance`**, the same 15 lines persisted as the artifact's first
+  section, gets exactly one Tier 1 check: that it is within its cap. **No Tier
+  2 criterion scores its content**, and no criterion elsewhere may be justified
+  by what it does or does not say.
+
+A rubric written for a 200-line contract scores a 15-line sketch as
+catastrophically incomplete, which is true and useless. The human's approval is
+the entire gate for those 15 lines. Everything else in the artifact is judged
+exactly as below.
 
 ## Why the judge must be a stranger to the work
 
@@ -41,15 +49,21 @@ the interviewing side; here it applies to grading instead.
 This is a hard rule, not a judgment call the orchestrating agent gets to
 make case by case:
 
-- Tier 2 MUST be dispatched via the `Agent` tool as a genuinely separate
-  subagent — never scored inline by the agent that wrote or edited the
+- Tier 2 MUST be dispatched as a genuinely separate subagent — whatever your
+  harness calls that (Claude Code: the `Agent` tool; other harnesses: their
+  subagent or sub-task mechanism) — never scored inline by the agent that wrote or edited the
   artifact, and never scored by re-reading the authoring conversation.
-- The judge receives **only**: the raw content of the artifact under review,
-  plus the raw content of any artifact its rubric requires as context (a
-  `design.md` review needs the `spec.md` it implements; an ADR review may
-  need nothing beyond itself). Paste file content into the dispatch prompt —
-  do not hand the judge a file path and let it read the artifact through a
-  session that remembers how the artifact came to be.
+- The judge receives **only**: the artifact under review, plus any artifact its
+  rubric requires as context (a `design.md` review needs the `spec.md` it
+  implements; an ADR review may need nothing beyond itself).
+- **Hand the judge the file paths and let it read them itself.** Do not read the
+  artifacts into the orchestrating context in order to paste them into the
+  prompt. A fresh subagent opening a file has seen nothing but that file — it is
+  exactly as isolated as pasted text, and it keeps several thousand tokens out
+  of the orchestrating context, where everything is re-read on every remaining
+  turn of the session. What this rule forbids is the *orchestrator* scoring from
+  a context that remembers writing the artifact; a subagent with no history and
+  a path is not that.
 - The judge never receives the discovery transcript, prior chat turns, or
   any framing beyond the rubric and the artifact text itself. If the judge
   can infer what the author intended beyond what's on the page, the score is
@@ -58,6 +72,19 @@ make case by case:
 An orchestrating agent that skips this and self-scores an artifact it just
 wrote has not run Tier 2 — it has produced a number that looks like a Tier 2
 result and isn't one.
+
+## Exactly one judge per round
+
+One judge subagent per artifact per round. Never dispatch parallel judges for
+consensus, never dispatch a second to break a tie, and never dispatch judges
+for two artifacts at once. The pipeline is sequential by construction — design
+needs an active spec, plan needs an active design — so concurrency buys nothing
+and multiplies the tail latency: with four judges in flight, the slowest one
+sets the wall-clock for all of them.
+
+If a score looks wrong, the answer is the triage loop below, not a second
+opinion. Two judges disagreeing produces a number to argue about, not a better
+artifact.
 
 ## Which artifacts get judged
 
@@ -83,21 +110,31 @@ badly-handled criterion (e.g. a 15-point criterion scored at 3) can sink an
 otherwise-strong artifact — that's intentional; semantic defects don't
 average out against unrelated strengths.
 
+**Every criterion below scores facts, not prose volume.** A one-line table row
+that names the required fact earns full marks; three paragraphs that never name
+it earn zero. The templates these artifacts are written from are table-first by
+design (see `references/artifact-spec.md`), and a judge that reads a dense row
+as "underspecified" will push a correct artifact back toward length it does not
+need. Deduct for a missing fact. Never for a missing paragraph.
+
 ### spec.md (100 pts)
 
 | Criterion | Points |
 |---|---|
-| Business rules are falsifiable and testable, not vague aspirations | 20 |
-| Acceptance criteria are proper Gherkin, each mapping to exactly one business rule | 20 |
-| Edge cases are genuinely edge — boundary, failure, concurrency — not restated happy-path | 15 |
-| Non-goals meaningfully fence off adjacent scope creep, not vacuous statements | 10 |
+| Every business rule names a checkable condition — a threshold, a comparison, an enumerated set. A row stating the condition scores full; prose that never states one scores zero | 20 |
+| Each acceptance criterion has a Given/When/Then with a binary outcome and proves exactly one business rule | 20 |
+| Each edge case names a boundary, failure, concurrency, or malformed-input trigger. A restated happy path scores zero for that row | 15 |
+| Each non-goal names the adjacent scope it excludes and why. "Not doing X" with no reason scores zero | 10 |
 | Zero implementation leakage: no tech stack, table names, endpoints, or library names | 15 |
-| Traceability matrix is complete — every BR/EC has AC coverage or an explicit open gap, no orphaned ids | 10 |
-| Change log accurately reflects the artifact's real revision history | 10 |
+| Every BR and EC id appears in the traceability matrix, mapped to an AC or to a named, explicit gap. No orphaned ids | 10 |
+| Change log records the real revision history with the gate score of each version | 10 |
 
-A business rule that reads "the system should handle splits reasonably" is a
-zero on the first criterion regardless of how polished the surrounding prose
-is — "reasonably" is not a condition anything can be checked against.
+Two calibration points. "The system should handle splits reasonably" is a zero
+on the first criterion however polished the surrounding prose — "reasonably" is
+not a condition anything can check. And `| BR-01 | total must not exceed 100% |
+sum(allocations) <= 100, checked before acceptance | a payment can be covered
+once |` is **full marks**: the condition is named, mechanically checkable, and
+the row is complete. Do not deduct it for having no rationale paragraph.
 
 ### design.md (100 pts)
 
@@ -108,19 +145,25 @@ is — "reasonably" is not a condition anything can be checked against.
 | Resilience (retries, idempotency, timeouts, backpressure) is addressed wherever the design does I/O or has side effects | 15 |
 | Observability (logs/metrics/traces) is specified for operations that matter to debugging or SLOs | 10 |
 | Conditional sections (§1.2, §3.3, §3.4, §6.2 per `references/design-extensions.md`) are correctly triggered or explicitly marked not-applicable with a real reason, never silently omitted | 10 |
-| Data/schema changes are backward compatible, or a migration path is addressed | 15 |
-| Cross-cutting concerns defer to an ADR by reference rather than re-deciding them inline | 10 |
+| Data/schema changes are backward compatible, or a migration path is addressed | 10 |
+| Cross-cutting concerns defer to an ADR by reference rather than re-deciding them inline | 5 |
+| §9's File Map lists every file the feature touches by literal repo-relative path, and every contract names its exact symbol and signature rather than describing it | 10 |
 
 Judging design.md requires the `spec.md` it implements as referenced
 context — the judge cannot check "does every failure mode from the spec's
 edge cases get handled" without seeing the spec's edge cases.
+
+The File Map criterion exists because tasks are executed by fresh subagents
+with no session memory, often small models. "The validation module" is not a
+path a subagent can resolve, so it invents one. `src/payments/split_validator.py`
+is. Score the literalness, not the length.
 
 ### adr.md (100 pts)
 
 | Criterion | Points |
 |---|---|
 | The problem is genuinely cross-cutting/architectural, not one feature's local implementation choice | 20 |
-| At least two considered options are real alternatives with honest tradeoffs, not straw men set up to lose | 25 |
+| At least two considered options state an honest case a competent engineer would actually make for them; an option written so it obviously loses scores zero for that row | 25 |
 | The decision outcome follows demonstrably from the stated decision drivers, not asserted by fiat | 15 |
 | Consequences & trade-offs section is honest about downsides and costs, not only upside | 20 |
 | Compliance verification gives a concrete, checkable test of adherence (a lint rule, a code pattern, a review checklist item) | 20 |
@@ -143,14 +186,76 @@ context for the other.
 | Every task is scoped to one verifiable outcome, has an agent allocation, and a REQUIRED/OPTIONAL criticality tag | 20 |
 | `coverage_threshold` is declared and at least one coverage-verification task exists per milestone | 15 |
 | The blocker/circuit-breaker protocol names who decides and what concretely triggers escalation, not "the team will figure it out" | 15 |
-| Model allocations follow the resolution order in `references/artifact-plan-tasks.md` (repo convention -> user answer -> task-fit justification, Anthropic preferred only on a genuine tie) rather than being arbitrary or hardcoded | 15 |
+| Model allocations follow the resolution order in `references/artifact-plan-tasks.md` (repo convention -> user answer -> task-fit justification, Anthropic preferred only on a genuine tie) rather than being arbitrary or hardcoded | 10 |
+| Every task's `[files: ...]` tag lists literal repo-relative paths drawn from design.md §9, and the task description names symbols rather than describing them | 5 |
+
+## Two configurable choices: the model, and the depth
+
+Both are the human's call, per `SKILL.md`'s Human Decision Supremacy invariant.
+Neither is guessed. Resolve them in this order and stop at the first that
+answers:
+
+1. **`.specs/sdd.config.yml`**:
+
+   ```bash
+   grep '^judge_model:\|^judge_depth:' .specs/sdd.config.yml 2>/dev/null
+   ```
+
+   ```yaml
+   judge_model: sonnet     # any model the Agent tool accepts
+   judge_depth: fast       # fast | full
+   ```
+
+2. **No file, or a key is absent** — ask the human, once, both questions in one
+   message, then offer to write the answers into `.specs/sdd.config.yml` so the
+   question does not come back every feature.
+
+   **Ask with a recommendation attached, never as a blank.** Follow
+   `references/model-selection.md`: find out what they can reach, look up what
+   currently exists instead of answering from memory, and propose a specific
+   model with one line of reasoning. For the Evaluator role that reasoning is
+   usually: the rubric supplies the structure, so this rewards careful reading
+   over creativity, and it is the highest-frequency role — which makes it where
+   model choice moves the bill most.
+
+Judges are dispatched on `judge_model`. Left unresolved, a judge inherits
+whatever model the orchestrating session is running — usually the largest and
+slowest available, which is the single biggest reason a gate feels slow. There
+is no default worth guessing here: a fast model that misses a semantic defect
+and a slow model that finds one are a real trade, and it is not the agent's
+trade to make.
+
+## `fast` and `full`
+
+Both lanes use **the same rubric, the same criteria, the same weights, and the
+same 90/100 pass bar.** Depth changes how much the judge writes and how many
+times it runs — never what it measures.
+
+| | `fast` | `full` |
+|---|---|---|
+| Criteria scored | all | all |
+| Pass bar | >=90/100 | >=90/100 |
+| A criterion at full marks | score only | score + justification |
+| A criterion below max | score + deficiency + fix | score + justification + deficiency + fix |
+| Round cap | **1 re-judge**, then the human decides | uncapped |
+
+In `fast`, a FAIL after the one re-judge is not a loop — it is a decision point.
+Present the remaining deficiencies and let the human choose: fix and dispatch
+again, or accept the named gap as documented risk. This bounds the worst case at
+two dispatches per artifact. `full` keeps the original uncapped behavior for
+work where a semantic gap is more expensive than an hour.
+
+`fast` is only affordable because the rubric requirements are also stated as
+authoring rules in each `references/artifact-*.md` — the artifact is written to
+pass rather than corrected into passing. If artifacts routinely fail round one,
+the authoring rules are the thing to fix, not the cap.
 
 ## The evaluator subagent prompt template
 
-This is the literal prompt to pass to the `Agent` tool when dispatching a
-Tier 2 judge. Fill in the placeholders; do not paraphrase the instructions
-away — the adversarial framing and the per-criterion deficiency requirement
-are load-bearing, not boilerplate.
+The literal prompt to pass to the subagent, dispatched on `judge_model`.
+Fill in the placeholders; do not paraphrase the instructions away — the
+adversarial framing, the anti-length rule, and the per-criterion deficiency
+requirement are load-bearing.
 
 ```
 You are a Tier 2 semantic quality judge for a Spec-Driven Development
@@ -163,41 +268,73 @@ Artifact type: {artifact_type}
 Rubric (100 points total, pass threshold 90/100):
 {rubric}
 
-Artifact content:
-{artifact_content}
+Artifact to score: {artifact_path}
+Read it now. It is your only source of truth about this artifact.
 
-Referenced artifact content (context only — do not score this directly,
-use it to check the primary artifact's claims and traceability):
-{referenced_artifact_content}
+Referenced artifact (context only — do not score it, use it to check the
+primary artifact's claims and traceability): {referenced_artifact_path}
+
+Read only these files. Do not open anything else in the repository, do not
+look at git history, and do not go looking for how either file came to be
+written — what is in them is the whole of what you are judging.
 
 Instructions:
 
-1. Score each rubric criterion independently, out of its stated point
-   value. For each one, write a one- or two-sentence justification before
-   you commit to a number — do not start from a gut-feel total and
-   backfill justifications to match it.
+1. Score each rubric criterion independently, out of its stated point value.
 2. Be adversarial. Your default posture is that the artifact is hiding
-   vagueness, hand-waving, or an unaddressed gap until you've actively
-   checked and ruled that out — not that it's fine until proven otherwise.
-   Look specifically for: hedge words ("reasonable," "as appropriate," "in
-   most cases," "should generally"), restated happy-path content dressed
-   up as an edge case, alternatives that no competent practitioner would
-   seriously propose, and claims of coverage or compliance that don't
-   trace to anything concrete in the text.
-3. Sum the criterion scores to a total out of 100. State the total and a
-   single explicit verdict line: "PASS (>=90)" or "FAIL (<90)". Do not
-   soften a FAIL with language suggesting it's close enough.
-4. For every criterion that scored below its maximum, state the SPECIFIC
-   deficiency — quote or point to the exact passage that's the problem —
-   and the SPECIFIC change that would fix it. "Tighten the business
-   rules" is not acceptable output; "BR-03 says 'handle splits
-   reasonably' — replace with a numeric threshold and the concrete
-   behavior when it's crossed" is.
+   vagueness, hand-waving, or an unaddressed gap until you have actively
+   checked and ruled that out. Look for: hedge words ("reasonable," "as
+   appropriate," "in most cases," "should generally"), restated happy-path
+   content dressed up as an edge case, alternatives no competent
+   practitioner would seriously propose, and claims of coverage or
+   compliance that trace to nothing concrete.
+3. Length is not evidence of quality. Never recommend expanding,
+   elaborating, or adding narrative. A one-line table row that names the
+   required fact scores full marks; three paragraphs that never name it
+   score zero. Deduct for a missing fact, never for a missing paragraph.
+   These artifacts are written from table-first templates on purpose.
+4. You are judging the artifact only. You are NOT challenging whether the
+   feature should be built, whether the premise holds, or whether a better
+   product decision exists — that argument already happened during
+   discovery and is out of your scope.
+5. For every criterion below its maximum, name the SPECIFIC deficiency —
+   quote the exact passage — and the SPECIFIC change that fixes it.
+   "Tighten the business rules" is not acceptable output. "BR-03 says
+   'handle splits reasonably' — replace with a numeric threshold and the
+   behavior when it is crossed" is.
 
-Output format: one block per criterion (name, score/max, justification,
-deficiency + fix if below max), then the total, then the PASS/FAIL verdict
-line.
+Output format, exactly this and nothing else. No preamble, no summary
+paragraph, no restating the artifact:
+
+CRITERION NAME: 18/20
+CRITERION NAME: 20/20
+CRITERION NAME: 6/15
+  deficiency: <quote the exact passage>
+  fix: <the specific change>
+TOTAL: 88/100
+VERDICT: FAIL
+
+Write the two indented lines ONLY for a criterion scoring below its
+maximum. A criterion at full marks gets its score line and nothing else.
+VERDICT is exactly "PASS" or "FAIL". Do not soften a FAIL with language
+suggesting it is close enough.
 ```
+
+**In the `full` lane only**, replace the last paragraph with: `Write a
+one-sentence justification under every criterion, including those at full
+marks, before the deficiency and fix lines.`
+
+When the dashboard is on (`references/dashboard.md`), append one line before
+dispatching — a three-minute judge changes nothing on disk until it finishes,
+so without this the dashboard looks frozen:
+
+```bash
+echo "{\"at\":\"$(date +%H:%M:%S)\",\"event\":\"Tier 2 judge dispatched for design.md\"}" >> .specs/.events.jsonl
+```
+
+The terse output is the largest speed lever available. Latency tracks output
+tokens, and justification prose for criteria that scored full marks is the bulk
+of what a judge writes and nobody reads.
 
 ## Recording the result in the artifact
 
@@ -219,7 +356,9 @@ validation:
   - tier2_score: 94            # 0-100, or n/a for discovery.md and test-catalog.md
   - tier2_verdict: PASS        # PASS | FAIL | n/a
   - tier2_at: 2026-08-27
-  - tier2_rounds: 2            # how many judge dispatches it took to reach this verdict
+  - tier2_rounds: 1            # how many judge dispatches it took to reach this verdict
+  - judge_model: sonnet        # the model the judge ran on
+  - judge_depth: fast          # fast | full
   - notes: "Round 1 scored 82 - EC-04 restated the happy path. Rewrote it as a concurrent-submission boundary; edge-case criterion went 6/15 to 14/15. Accepted risk: success metric SM-02 has no instrumentation yet, per the human."
 ```
 
@@ -227,7 +366,10 @@ Rules for the block:
 
 - **Every field, every time.** `tier1: skipped` is a legitimate value when
   neither runtime was available — an omitted key is not, because a reader
-  cannot tell a skipped pass from a forgotten one.
+  cannot tell a skipped pass from a forgotten one. `judge_model` and
+  `judge_depth` are recorded too: a 91 from a fast judge and a 91 from a full
+  one are not the same evidence, and a reader six months later cannot tell
+  which they are looking at unless the block says.
 - **`notes` is where the judgment lives.** It names what the judge actually
   caught and what changed in response, plus any gap the human accepted
   rather than fixed (with their rationale, per the triage loop below). "All
@@ -245,6 +387,15 @@ Rules for the block:
 - **A material edit invalidates the block.** Re-run both tiers and
   overwrite it; do not leave a stale score describing text that no longer
   exists.
+
+## After the block is written, offer the reset
+
+The artifact is now durable and the authoring context is not needed to write
+the next one. Run `sdd_status.py --context` for the real number, then offer a context reset
+in one line **with the estimate attached** — naming whatever command your
+harness uses (Claude Code: `/clear`, or `/compact` mid-phase), per
+`references/context-economy.md`, then stop. Once per boundary; if the human
+declines, carry on without mentioning it again.
 
 ## The triage loop
 
@@ -264,13 +415,17 @@ better roll. It's a punch list.
    earlier score is no longer independent. Give the new judge the same
    inputs a first-time judge would get: the revised artifact content (and
    referenced content) and nothing else.
-4. Repeat until PASS, or until a human explicitly decides to accept a named,
-   scored gap as documented risk rather than fix it. There is no fixed
-   retry cap — looping is cheap, shipping an artifact with an unexamined
-   semantic gap is not. When a gap is accepted rather than fixed, record it
-   the way `references/discovery.md` §6 records Accepted Risks: the
-   specific deficiency, in the human's own rationale for accepting it, not
-   silently dropped from the score report.
+4. **Stop at the cap.** In `fast`, that is one re-judge: if round 2 still
+   FAILs, do not dispatch a third. Present the remaining deficiencies and let
+   the human choose between fixing and accepting. In `full`, repeat until
+   PASS. Looping is cheap in tokens and expensive in wall-clock, and an
+   artifact that fails twice is usually telling you something the third judge
+   will not — the requirement was never settled, and that is a question for
+   the human, not another dispatch.
+5. When a gap is accepted rather than fixed, record it the way
+   `references/discovery.md` §6 records Accepted Risks: the specific
+   deficiency, in the human's own rationale for accepting it, never silently
+   dropped from the score report.
 
 A PASS is not a promotion out of scrutiny for future revisions — any
 material edit to a Tier-2-passed artifact means re-running both tiers

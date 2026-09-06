@@ -140,3 +140,14 @@ An "architectural fork" is any point in the challenge pass or role-play
 where two structurally different implementations both satisfy the problem
 statement — that fork does not get resolved here. Note it and let
 `references/artifact-adr.md` pick it up once design starts.
+
+## Optional: one event-modeling diagram
+
+`discovery.md` may carry a single event-modeling diagram — a `flowchart LR`
+using the swimlane convention, commands and events in the ubiquitous language,
+cap 12 nodes. Over cap it is dropped, not shrunk.
+
+It is expressed in domain language and names no technology, which is what makes
+it safe this early. No other diagram type belongs in discovery: a component or
+architecture diagram here decides a design question the interview has not
+earned the right to decide yet.

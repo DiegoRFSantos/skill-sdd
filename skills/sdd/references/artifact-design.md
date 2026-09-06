@@ -82,8 +82,9 @@ catching it there.
 - [ ] No field anywhere is typed `any`, and no schema is a bare `object`
       with no properties — both are hard-blocked by the linter's
       `DESIGN_LOOSE_TYPE_ANY` and `DESIGN_BARE_OBJECT` rules.
-- [ ] §4 contains at least one Mermaid `sequenceDiagram` with named
-      participants and no skipped steps.
+- [ ] §4 contains exactly one Mermaid `sequenceDiagram`, at most 8
+      participants, named from §1.1's components, with its failure branches
+      drawn as `alt`/`else` and no skipped steps.
 - [ ] §5's resilience numbers are literal values with units (`5 retries`,
       `3000ms`, `10 failures / 60s window`) — never "reasonable,"
       "appropriate," or "as needed."
@@ -93,3 +94,69 @@ catching it there.
       Traceability table.
 - [ ] `spec_ref` in the frontmatter resolves to an existing `spec` artifact,
       and every id in `dependencies` resolves to an existing `adr` artifact.
+
+
+## Written to pass
+
+Apply these while writing, so the gate confirms rather than corrects.
+
+- **Contracts name their symbols.** Not "the validation service" —
+  `SplitValidator.validate(payment, allocations) -> ValidationResult`. Not "an
+  error shape" — the named enum and its members. An executing agent should
+  never have to choose a name that the design should have given it.
+- **§9's File Map lists every file the feature touches**, by literal
+  repo-relative path, marked new or modified. A file that does not exist yet is
+  still written out in full: the task that creates it needs to be told exactly
+  where. This is what `tasks.md`'s `[files: ...]` tags draw on.
+- **Every interaction flow states its failure branches.** Timeout, partial
+  failure, duplicate submission, the dependency being down. A flow with only a
+  happy path scores zero on that criterion, and correctly so.
+- **Resilience numbers are literal, with units.** `5s timeout`, `3 retries with
+  exponential backoff`, `10 failures / 60s`. Never "reasonable," "appropriate,"
+  or "as needed."
+- **Observability names concrete signals** — the metric key, the log field —
+  not a description of what will eventually be logged.
+- **Conditional sections are triggered or explicitly marked
+  `_Not applicable: <reason>_`.** Silently omitting one is the failure mode
+  this rule exists to catch; the reason has to be real, not "not needed."
+- **Cross-cutting concerns defer to an ADR by reference.** If you find yourself
+  deciding auth, idempotency, or a concurrency strategy inline, that is an ADR,
+  not a design section.
+- **Schema changes are backward compatible, or the migration path is stated.**
+
+### Diagrams: at most two, and design.md is the only artifact that gets two
+
+Every other artifact gets one diagram or none. `design.md` gets **at most two,
+and only one of each kind**:
+
+1. **One structural diagram** in §1.1 — what the pieces are.
+2. **One sequence diagram** in §4 — what happens in what order, and what
+   happens when a step fails.
+
+They answer different questions, and neither substitutes for the other: a
+component map cannot show ordering, and a sequence cannot show what exists. A
+second structural diagram, or a second sequence, is not allowed.
+
+| Diagram | Syntax | Where | Cap |
+|---|---|---|---|
+| Flowchart, control flow with failure edges | `flowchart` | §1.1 | 12 nodes |
+| Data flow | `flowchart` with labeled edges and store nodes | §1.1 | 12 nodes |
+| C4, context or container level only | `C4Context` / `C4Container` | §1.1 | 10 elements |
+| Architecture | `architecture-beta` | §1.1 | 12 nodes |
+| Sankey, volume or flow distribution | `sankey-beta` | §1.1 | 10 links |
+| Sequence, an interaction flow with its failure branches | `sequenceDiagram` | §4 | 8 participants |
+
+The sequence diagram names **real participants from §1.1** — the actual
+component and symbol names, never generic actors like "Client" or "Service" —
+shows every step in order with none skipped, and draws its failure branches
+with `alt`/`else`, not only the happy path. §4's table carries the detail; the
+diagram carries the ordering. Neither replaces the other.
+
+`sankey-beta` and `architecture-beta` are beta in mermaid and C4 support is
+experimental; renderers disagree about all three. If the repo's own viewer does
+not render the type you picked, fall back to a `flowchart` rather than shipping
+a fenced block that displays as an error.
+
+A diagram is an index into the contracts and tables, never a place a
+requirement lives on its own. If a fact appears only in the diagram, it is not
+specified.

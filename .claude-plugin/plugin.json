@@ -1,7 +1,7 @@
 {
   "name": "sdd",
   "displayName": "Spec-Driven Development (SDD)",
-  "version": "1.1.0",
+  "version": "2.0.0",
   "description": "Spec-Driven Development: discovery, spec, design, ADRs, test catalog, plan/tasks, two-tier quality gate, execution, plus fast-track and troubleshooting lanes.",
   "author": {
     "name": "Diego R F Santos"

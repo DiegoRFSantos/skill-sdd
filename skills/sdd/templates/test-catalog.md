@@ -15,6 +15,8 @@ validation:                    # test-catalog.md has no Tier 2 rubric — the hu
   - tier2_verdict: n/a
   - tier2_at: n/a
   - tier2_rounds: 0
+  - judge_model: sonnet
+  - judge_depth: fast
   - notes: "Signed off by Diego on 2026-08-18. Tier 1 raised catalog_coverage_prompt on AC-04; recorded in §3 as a deliberate gap rather than adding a row."
 ---
 

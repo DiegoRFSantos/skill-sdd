@@ -1,0 +1,158 @@
+# The Progress Dashboard
+
+A local web page showing where a feature stands: which artifacts exist and what
+they scored, the current milestone, every task's state, and the blocker log.
+Optional, off unless asked for.
+
+## Why it costs nothing
+
+Everything it shows is **already on disk**, because this skill keeps its state
+there rather than in a session (`SKILL.md` Step 1). `scripts/sdd_status.py`
+reuses the linter's own parsers to read `tasks.md`'s checkbox marks, each
+artifact's frontmatter `status`, and each `validation:` block, and serves the
+result as JSON. The agent reports nothing and writes nothing extra.
+
+The saving is real but indirect: it comes from the agent no longer narrating
+progress in chat, per `SKILL.md`'s communication contract. The dashboard is
+what makes that silence tolerable — you can see progress instead of reading
+about it.
+
+## Running it
+
+```bash
+python3 "$SDD"/scripts/sdd_status.py --serve --repo-root .
+```
+
+Then open `http://127.0.0.1:4517`. `--port` changes the port.
+
+**Several projects at once.** `--repo-root` is repeatable, and the page gets a
+tab per project showing its open task count — working across projects and
+features simultaneously is the normal case, not something to run N copies for:
+
+```bash
+python3 .../sdd_status.py --serve --repo-root ~/work/api --repo-root ~/work/web
+```
+
+**Naming sessions.** Click a session row in the usage panel to label it
+("payment split spec", "the flaky-test hunt"). Labels are stored in
+`~/.claude/sdd-dashboard-names.json` — a viewing convenience only, so renaming
+never dirties a working tree or shows up in a diff.
+
+**Language.** The page ships English and Brazilian Portuguese. `--lang pt-BR`
+sets the default; the EN/PT-BR toggle in the header overrides it per browser and
+persists in `localStorage`. Only the UI chrome is translated — task
+descriptions, blocker notes and feature names stay in whatever language the
+artifacts were written in, because translating a human's own artifact text would
+be both wrong and impossible.
+
+**Task order is newest first.** The most recent milestone sits at the top and
+Task 1.1 at the bottom. In plan order, a feature mid-execution buries the live
+edge under every task already finished, which is the opposite of what a progress
+view is for. `tasks.md` keeps dependency order on disk; only the display
+reverses.
+
+**What it costs the human's bill: nothing.** No network calls, no API keys, no
+telemetry. Every number comes from a file already on the machine. A server is
+needed rather than opening the file directly because `fetch()` from a `file://`
+page is blocked by CORS.
+
+One-shot, no server, for piping into something else:
+
+```bash
+python3 "$SDD"/scripts/sdd_status.py --json --repo-root .
+```
+
+The page polls once a second and re-renders only when the state actually
+changed, so scrolling a long task list is not fought by the refresh. If the
+server stops, the page keeps the last state on screen and says so rather than
+going blank.
+
+## Turning it on
+
+```yaml
+# .specs/sdd.config.yml
+dashboard: on    # on | off
+```
+
+`on` means: start the server in the background at the beginning of a session,
+give the human the URL **once**, and never mention it again. Do not re-announce
+it each phase, do not describe what it is showing — that is exactly the
+narration the dashboard exists to replace.
+
+Absent or `off`, do not start it and do not offer it more than once per
+session.
+
+## Event pings — the one thing not on disk
+
+A judge running for three minutes looks identical to nothing happening, because
+nothing on disk changes until it finishes. For that, and only that, the agent
+appends one line:
+
+```bash
+echo "{\"at\":\"$(date +%H:%M:%S)\",\"event\":\"Tier 2 judge dispatched for design.md (sonnet, fast)\"}" >> .specs/.events.jsonl
+```
+
+Rules:
+
+- **Only for work in flight that disk cannot show.** A judge dispatched, a
+  subagent dispatched, a long test run started. Never for something that is
+  about to be written to a file anyway — the file is the record.
+- **One line, one sentence.** Roughly 15 tokens. An event that needs a
+  paragraph is a chat message pretending to be an event.
+- **Never a substitute for telling the human something they must act on.** A
+  blocker goes in `tasks.md`'s Blocker Log and gets said out loud. An event
+  ping is ambient, and ambient information is not consent.
+- The file is append-only and disposable. A malformed line is shown verbatim
+  rather than crashing the page; deleting the file loses nothing.
+
+Add `.specs/.events.jsonl` to `.gitignore` — it is session noise, not a record
+of the system.
+
+## Liveness costs nothing now
+
+The page shows "last change 12s ago — spec.md", read from file mtimes. A
+running session writes files; nothing written for a long time means finished or
+stuck, and either way that is what you want to see. This replaced the event
+ping as the default liveness signal because it costs the agent nothing.
+
+Event pings are now **optional and off by default**. Write one only when naming
+what is happening is genuinely worth ~20 tokens — a judge dispatch that will run
+for minutes is the case that qualifies. Most sessions should write none.
+
+## The token usage panel
+
+The dashboard reads this project's Claude Code transcripts from
+`~/.claude/projects/<encoded-repo-path>/*.jsonl` and shows, per session: turns,
+average context, cache reads, fresh input, and output. **This costs zero agent
+tokens** — those files are written by the harness whether or not anything reads
+them.
+
+What the panel is for is one relationship:
+
+> **cost ≈ turns × context size**
+
+Everything in context is re-read on every subsequent turn. A 2,400-token
+artifact that enters context at turn 50 of a 330-turn session is not a
+2,400-token cost — it is 2,400 × 280 in cache reads. This is why the artifact
+budgets, the section extractor, and the fresh-session handoff matter more than
+their file sizes suggest, and why an artifact read late is cheaper than the same
+artifact read early.
+
+Cache reads bill at a fraction of fresh input, so they are shown separately
+rather than summed into one misleading number. Output is the priciest per token,
+which is what the terse judge output contract in `references/quality-gate.md`
+exists to cut.
+
+If the panel is empty, this repo has no transcripts under `~/.claude/projects/`
+yet — nothing is broken.
+
+**Other harnesses.** Claude Code's transcript directory is read automatically.
+Any other tool that writes one JSON object per turn to a local `*.jsonl`, with a
+`usage` object using Anthropic's field names (`input_tokens`,
+`cache_read_input_tokens`, `output_tokens`, ...), is read by pointing
+`SDD_USAGE_DIR` at its directory.
+
+This is deliberately file-only: a source that needs a network call and an API
+key is out of scope for this dashboard, whatever it would show. A harness that
+keeps its accounting only behind an API cannot be read here, and the panel says
+so rather than pretending.

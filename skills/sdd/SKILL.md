@@ -30,6 +30,87 @@ from an approved specification.
    in the artifact's `validation:` frontmatter block; execution reads it
    instead of re-running it.
 
+## How to talk while doing this
+
+Every message costs the human attention and the session context. These are as
+binding as the invariants above.
+
+- **State report: one line.** `payment-split: spec active (94 PASS), design draft.`
+- **Gate PASS: one line.** `spec.md — Tier 1 pass, Tier 2 94 PASS (1 round).`
+- **Gate FAIL: that line, then the deficiencies as bullets.** Nothing else. No
+  reassurance, no plan for what you will do about it — the triage loop already
+  says what happens next.
+- **Never restate an artifact you just wrote.** `## 0. At a Glance` is its
+  summary; link the file and stop.
+- **Never narrate the process.** Not "now I'll move to the design phase," not
+  "let me read the reference for that," not an explanation of what SDD is. Do
+  the thing.
+- **Never explain a rule of this skill unless asked.** Applying it is the
+  explanation.
+- **Questions: batch the independent ones, numbered, no preamble.** Do not
+  restate a question in prose before asking it, and do not pad the options with
+  reassurance about there being no wrong answer.
+- **Say the thing that is actually true**, including when it is inconvenient: a
+  skipped Tier 1, a fast-lane gate, an assumption you had to make. Brevity is
+  never a reason to leave out a caveat that changes what the human would do.
+
+Terseness applies to your messages, not to the artifacts — and never to a
+question that zero inference requires you to ask.
+
+## Context economy — read before reading anything large
+
+**Cost is turns times context size.** Everything in context is re-read on every
+later turn, so a file read is never a one-time cost. Three rules cover most of
+it; `references/context-economy.md` has the rest and the measurements.
+
+- **Never read a file you are about to hand to a subagent.** Give it the path,
+  or the `sdd_extract.py` command. Its context is disposable; yours is not.
+- **Extract, do not `cat`.** `sdd_extract.py <file> --outline` to find the
+  section, `--section N.N` or `--ids BR-01,AC-02` to take only it.
+- **Grep before you read.** State detection in Step 1 never reads an artifact.
+- **Offer a context reset after every gated artifact**, with the saving
+  attached: `sdd_status.py --context` gives the number. A full reset at a phase boundary, a
+  compaction mid-phase — named for whatever the human's harness uses (in Claude
+  Code, `/clear` and `/compact`). You cannot run either: offer once, in one
+  line, and accept the answer.
+
+## Configuration
+
+Four optional keys, all in `.specs/sdd.config.yml`, all documented in
+`references/configuration.md`:
+
+```bash
+cat .specs/sdd.config.yml 2>/dev/null
+```
+
+`summary_preview`, `judge_model`, `judge_depth`, `dashboard`. The file is
+optional; an absent key means ask. **`judge_model` and `judge_depth` are never
+guessed.** `dashboard: on` → start it once, give the URL once, never mention it
+again (`references/dashboard.md`).
+
+## Step 0 — Find the scripts, whichever way this was installed
+
+This skill runs under any agent harness that can read files, run shell
+commands, and dispatch a subagent. Installs put the scripts in different
+places, so resolve the directory once per session and reuse it; never hardcode
+one path.
+
+```bash
+SDD=$(for d in "$SDD_HOME" "$CLAUDE_PLUGIN_ROOT/skills/sdd" \
+               "$HOME/.claude/skills/sdd" ".claude/skills/sdd" \
+               "$HOME/.config/sdd" ".sdd" "skills/sdd"; do
+  [ -n "$d" ] && [ -f "$d/scripts/sdd_lint.py" ] && echo "$d" && break
+done)
+echo "${SDD:-NOT FOUND}"
+```
+
+Every script invocation is then `"$SDD"/scripts/<script>.py`. `SDD_HOME` is the
+escape hatch: any harness or layout not covered above works by exporting it.
+
+If the resolver prints `NOT FOUND`, say so plainly — the deterministic gate
+cannot run, and `references/quality-gate.md`'s Tier 1 checklist has to be walked
+by hand instead.
+
 ## Step 1 — Detect state before doing anything
 
 State lives on disk, not in memory. A cold session reconstructs it:
@@ -85,51 +166,76 @@ ships an unreviewed invariant.
 | New idea, or the user is unsure what they need | `references/discovery.md` | `discovery.md` |
 | Discovery resolved, no spec | `references/elicitation.md` + `references/artifact-spec.md` + `templates/spec.md` | `spec.md` |
 | Spec active, no design | `references/artifact-design.md` + `references/design-extensions.md` + `templates/design.md` | `design.md` |
+| A model must be chosen for any role | `references/model-selection.md` | a confirmed `allocated_agents` block |
 | A cross-cutting decision surfaced | `references/artifact-adr.md` + `templates/adr.md` | `.adrs/NNNN-slug.md` |
 | Design active, no catalog | `references/artifact-plan-tasks.md` + `templates/test-catalog.md` | `test-catalog.md` |
 | Catalog done, no plan | `references/artifact-plan-tasks.md` + `templates/plan.md` + `templates/tasks.md` | `plan.md`, `tasks.md` |
 | Any artifact drafted | `references/quality-gate.md` | score report + sign-off |
 | Tasks gated, ready to build | `references/execution.md` | working code |
 
-## Step 4 — Offer the summary preview before writing
+## Step 4 — The 15-line summary, written once
 
-Long artifacts are validated badly when the human's first look at the
-feature is a 300-line document. Before authoring `discovery.md`, `spec.md`,
-`design.md`, an ADR, `test-catalog.md`, or the `plan.md`+`tasks.md` pair,
-resolve the preference and — unless it says `never` — show a 15-line
-plain-language sketch first.
+Artifacts are validated badly when the human's first look at a feature is a
+200-line document. One 15-line plain-language sketch fixes that, and it is used
+in two places: shown in chat before the artifact is written, and persisted as
+the artifact's `## 0. At a Glance` section.
+
+The **section** is required in `spec.md` and `design.md`, linted, cap enforced.
+The **chat preview** is a preference:
 
 ```bash
 grep '^summary_preview:' .specs/sdd.config.yml 2>/dev/null
 ```
 
 No file, or the value is `ask` → ask the user for this artifact. Read
-`references/summary-preview.md` for the format, the 15-line cap, and the
-rule that **the preview is never linted and never judged** — the human is
-its only validator.
+`references/summary-preview.md` for the format and the rule that **neither
+the preview nor `## 0. At a Glance` is ever judged** — Tier 1 checks the
+section's cap, and the human is the only validator of its content.
 
 ## Step 5 — Gate every artifact before moving on
 
 Run Tier 1 first — it is cheap and deterministic:
 
 ```bash
-python3 ${CLAUDE_PLUGIN_ROOT}/skills/sdd/scripts/sdd_lint.py <artifact> --repo-root .
+python3 "$SDD"/scripts/sdd_lint.py <artifact> --repo-root .
 ```
 
 If `python3` is unavailable, use the Node runner:
 
 ```bash
-node ${CLAUDE_PLUGIN_ROOT}/skills/sdd/scripts/sdd_lint.mjs <artifact> --repo-root .
+node "$SDD"/scripts/sdd_lint.mjs <artifact> --repo-root .
 ```
 
 If neither runtime exists, walk the Tier 1 checklist in `references/quality-gate.md`
 manually **and state explicitly that the deterministic pass was skipped**.
 
+Tier 2 needs two answers before it can dispatch — which model the judge runs
+on, and whether the gate runs `fast` or `full`:
+
+```bash
+grep '^judge_model:\|^judge_depth:' .specs/sdd.config.yml 2>/dev/null
+```
+
+Missing either one, ask the human once, both in the same message, and offer to
+save the answers. Never guess a judge model: unset, the judge inherits the
+orchestrating session's model — usually the slowest available — which is the
+single biggest reason a gate feels slow.
+
 Then run Tier 2 and the triage loop per `references/quality-gate.md`, and
 write the outcome into the artifact's `validation:` frontmatter block —
-score, verdict, date, and the notes. An artifact that passed a gate without
+score, verdict, date, judge model and depth, and the notes. An artifact that passed a gate without
 recording it has not finished the gate: the next phase reads that block
 instead of re-running the judge.
+
+## Step 6 — Hand off before executing
+
+A gated `tasks.md` is the end of this session's job, not the start of the next
+phase in it. The session that ran discovery, the interview and the gate rounds
+is carrying a context window implementation does not need, and every task
+dispatch inherits that weight. Print the handoff command from
+`references/artifact-plan-tasks.md`, offer to continue here in one line, and
+let the human choose. Everything execution needs is on disk, so nothing is lost
+either way.
 
 ## Never do these
 
@@ -137,9 +243,23 @@ instead of re-running the judge.
 - Pick a model, a coverage threshold, or a rollout strategy on the user's behalf.
 - Re-gate an artifact at implementation time when its `validation:` block
   already records a PASS and nothing has changed since — read the block.
-- Lint or dispatch a Tier 2 judge on a summary preview.
+- Lint or dispatch a Tier 2 judge on a summary preview or on `## 0. At a Glance`.
+- Dispatch more than one judge per artifact per round, or judge two artifacts
+  at once.
+- Pick a judge model, or a `fast`/`full` depth, without asking.
+- Ask which model to use without first checking what the human can reach and
+  proposing one per role, each with a line of reasoning. A blank question makes
+  the human do the research.
+- Name a model id from memory — look it up (`claude-api` skill for Claude), and
+  never append a date suffix to an exact id.
+- Write a task line without a `[files: ...]` tag, or refer to a file or symbol
+  by description when the design names it literally.
+- Ship a mermaid diagram over its node cap — drop it instead.
 - Create a directory before there is a file to put in it.
 - Mark a task `[x]` without running its tests.
 - Continue past a milestone gate without human sign-off.
+- Read an artifact into your own context in order to paste it to a subagent —
+  hand over the path or the `sdd_extract.py` command instead.
+- Re-offer a context reset the human already declined for this phase.
 - Write a troubleshooting fix before the user has seen the proposal and picked a lane.
 - Edit an ADR that is already `accepted` — supersede it instead.

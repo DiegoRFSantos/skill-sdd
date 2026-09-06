@@ -1,0 +1,464 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SDD Progress</title>
+<style>
+  :root {
+    --bg: #f6f7f9;      --panel: #ffffff;   --ink: #14171a;
+    --muted: #5c6672;   --line: #dde2e8;    --accent: #3b6ea5;
+    --done: #2f7d4f;    --run: #b0761f;     --block: #b3423a;   --idle: #98a2ae;
+    --chip: #eef1f5;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #14171a;    --panel: #1c2126;   --ink: #e8ecf1;
+      --muted: #9aa5b1; --line: #2b3239;    --accent: #7aa8c0;
+      --done: #6fbf8b;  --run: #d8a24a;     --block: #e0796f;   --idle: #5c6672;
+      --chip: #232a31;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 24px; background: var(--bg); color: var(--ink);
+    font: 14px/1.5 ui-sans-serif, -apple-system, "Segoe UI", Roboto, sans-serif;
+  }
+  h1 { font-size: 18px; margin: 0 0 2px; }
+  h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .06em;
+       color: var(--muted); margin: 24px 0 10px; font-weight: 600; }
+  .sub { color: var(--muted); font-size: 12px; margin-bottom: 20px; }
+  .panel { background: var(--panel); border: 1px solid var(--line);
+           border-radius: 8px; padding: 14px 16px; }
+
+  /* Phase pipeline */
+  .pipeline { display: flex; gap: 8px; flex-wrap: wrap; }
+  .phase { flex: 1 1 130px; min-width: 130px; background: var(--panel);
+           border: 1px solid var(--line); border-left: 3px solid var(--idle);
+           border-radius: 6px; padding: 10px 12px; }
+  .phase.active { border-left-color: var(--done); }
+  .phase.draft  { border-left-color: var(--run); }
+  .phase.fail   { border-left-color: var(--block); }
+  .phase .name { font-weight: 600; }
+  .phase .meta { color: var(--muted); font-size: 12px; margin-top: 3px; }
+  .score { font-variant-numeric: tabular-nums; font-weight: 600; }
+  .score.pass { color: var(--done); }
+  .score.fail { color: var(--block); }
+
+  /* Tasks */
+  table { width: 100%; border-collapse: collapse; }
+  th { text-align: left; font-size: 12px; color: var(--muted); font-weight: 600;
+       padding: 6px 8px; border-bottom: 1px solid var(--line); }
+  td { padding: 6px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  tr:last-child td { border-bottom: 0; }
+  .mstone td { background: var(--chip); font-weight: 600; font-size: 12px;
+               color: var(--muted); }
+  .mark { width: 1.4em; text-align: center; font-weight: 700; }
+  .done .mark { color: var(--done); }
+  .in_progress .mark { color: var(--run); }
+  .blocked .mark { color: var(--block); }
+  .pending .mark { color: var(--idle); }
+  .done td.desc { color: var(--muted); }
+  code, .files { font: 12px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace;
+                 color: var(--muted); }
+  .files { display: block; margin-top: 2px; word-break: break-all; }
+  .agent { font-size: 12px; color: var(--muted); white-space: nowrap; }
+  .scroll { overflow-x: auto; }
+
+  .bar { height: 6px; background: var(--chip); border-radius: 3px; overflow: hidden;
+         margin: 8px 0 0; }
+  .bar > i { display: block; height: 100%; background: var(--done); }
+
+  .events li, .blockers li { margin-bottom: 4px; }
+  ul { margin: 0; padding-left: 18px; }
+  .empty { color: var(--muted); font-style: italic; }
+  .dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%;
+         background: var(--done); margin-right: 6px; vertical-align: middle; }
+  .stale .dot { background: var(--block); }
+  footer { margin-top: 26px; color: var(--muted); font-size: 12px; }
+  .langs { float: right; }
+  .lang-btn { background: none; border: 1px solid var(--line); color: var(--muted);
+              font: inherit; font-size: 11px; padding: 1px 7px; cursor: pointer; }
+  .lang-btn:first-child { border-radius: 4px 0 0 4px; }
+  .lang-btn:last-child { border-radius: 0 4px 4px 0; border-left: 0; }
+  .lang-btn[aria-selected="true"] { background: var(--chip); color: var(--ink); font-weight: 600; }
+
+  .num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .cost td, .cost th { font-size: 13px; }
+  .cost tr.now td { font-weight: 600; }
+  .note { color: var(--muted); font-size: 12px; margin-top: 10px; }
+  .stack { display: flex; height: 8px; border-radius: 4px; overflow: hidden;
+           margin-top: 4px; background: var(--chip); }
+  .stack > i { display: block; height: 100%; }
+  .k-read { background: var(--accent); }
+  .k-write { background: var(--run); }
+  .k-out { background: var(--block); }
+  .legend { font-size: 12px; color: var(--muted); margin-top: 6px; }
+  .legend b { font-weight: 600; }
+  .legend .sw { display: inline-block; width: 8px; height: 8px; border-radius: 2px;
+                margin: 0 4px 0 12px; vertical-align: middle; }
+  .legend .sw:first-child { margin-left: 0; }
+
+  .tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 18px;
+          border-bottom: 1px solid var(--line); padding-bottom: 10px; }
+  .tab { background: var(--chip); border: 1px solid transparent; color: var(--muted);
+         border-radius: 6px; padding: 5px 11px; cursor: pointer; font: inherit;
+         font-size: 13px; }
+  .tab:hover { color: var(--ink); }
+  .tab[aria-selected="true"] { background: var(--panel); border-color: var(--line);
+                               color: var(--ink); font-weight: 600; }
+  .tab .badge { color: var(--muted); font-weight: 400; margin-left: 6px; font-size: 12px; }
+  .label-cell { cursor: text; }
+  .label-cell:hover { text-decoration: underline dotted; text-underline-offset: 3px; }
+  .label-cell .ph { color: var(--idle); font-style: italic; }
+  .agent-tag { font-size: 11px; text-transform: uppercase; letter-spacing: .04em;
+               padding: 2px 7px; border-radius: 10px; background: var(--chip);
+               color: var(--muted); }
+  .agent-tag.claude { color: var(--accent); }
+  .agent-tag.other { color: var(--run); }
+  .label-cell input { font: inherit; color: var(--ink); background: var(--bg);
+                      border: 1px solid var(--accent); border-radius: 4px;
+                      padding: 2px 6px; width: 15ch; }
+</style>
+</head>
+<body>
+<h1 id="repo">SDD Progress</h1>
+<div class="sub"><span class="dot"></span><span id="tick"></span>
+  <span id="live" style="margin-left:12px"></span>
+  <span class="langs">
+    <button class="lang-btn" data-lang="en">EN</button><button class="lang-btn" data-lang="pt-BR">PT-BR</button>
+  </span></div>
+<main id="out"></main>
+<footer id="foot"></footer>
+
+<script>
+// UI chrome is translated; artifact content is not. A task description, a
+// blocker note, a feature name — those are whatever language the human wrote
+// their artifacts in, and translating them would be both wrong and impossible.
+const STRINGS = {
+  en: {
+    title: "SDD Progress", connecting: "connecting…", updated: "updated",
+    lastChange: (n, f) => `last change ${n}s ago — ${f}`,
+    down: "server not responding — is sdd_status.py --serve still running?",
+    notStarted: "not started", noRubric: "no rubric", lines: "lines",
+    tasks: "Tasks", blockers: "Blockers", adrs: "ADRs", inFlight: "In flight",
+    usage: "Token usage", milestone: "milestone", declared: "declared",
+    thTask: "Task", thWhat: "What", thAgent: "Agent", thSession: "Session",
+    thTurns: "Turns", thContext: "Avg context", thRead: "Cache read",
+    thFresh: "Fresh in", thOut: "Out",
+    rename: "click to rename", latest: "latest", isBlocked: "is blocked",
+    noProjects: "No projects being watched.",
+    noFeatures: "No features under .specs/features/ in this project yet.",
+    noTasks: "No tasks yet.", noSessions: "No sessions found yet.",
+    open: "open",
+    notReading: (a) => `Not reading: ${a}. Point SDD_USAGE_DIR at a session directory to include it.`,
+    costNote: (ctx, turns) => `Cost tracks <b>turns &times; context</b>: everything in context is
+      re-read every turn, so ${ctx} &times; ${turns} turns is where the cache-read total comes
+      from. Cache reads bill at a fraction of fresh input; output is the priciest per token.
+      Read from this project's local transcripts — no agent tokens involved.`,
+    footer: `Derived from disk — <code>tasks.md</code> marks, frontmatter, and each artifact's
+      <code>validation:</code> block. Nothing here is reported by the agent.`,
+    legendRead: "cache read", legendFresh: "fresh input", legendOut: "output",
+  },
+  "pt-BR": {
+    title: "Progresso SDD", connecting: "conectando…", updated: "atualizado",
+    lastChange: (n, f) => `última mudança há ${n}s — ${f}`,
+    down: "servidor não responde — o sdd_status.py --serve ainda está rodando?",
+    notStarted: "não iniciado", noRubric: "sem rubrica", lines: "linhas",
+    tasks: "Tarefas", blockers: "Bloqueios", adrs: "ADRs", inFlight: "Em andamento",
+    usage: "Consumo de tokens", milestone: "marco", declared: "declarado",
+    thTask: "Tarefa", thWhat: "O quê", thAgent: "Agente", thSession: "Sessão",
+    thTurns: "Turnos", thContext: "Contexto médio", thRead: "Leitura de cache",
+    thFresh: "Entrada nova", thOut: "Saída",
+    rename: "clique para renomear", latest: "mais recente", isBlocked: "está bloqueada",
+    noProjects: "Nenhum projeto sendo acompanhado.",
+    noFeatures: "Nenhuma feature em .specs/features/ neste projeto ainda.",
+    noTasks: "Nenhuma tarefa ainda.", noSessions: "Nenhuma sessão encontrada ainda.",
+    open: "abertas",
+    notReading: (a) => `Não está lendo: ${a}. Aponte SDD_USAGE_DIR para um diretório de sessões para incluir.`,
+    costNote: (ctx, turns) => `O custo é <b>turnos &times; contexto</b>: tudo que está no contexto
+      é relido a cada turno, então ${ctx} &times; ${turns} turnos é de onde vem o total de leitura
+      de cache. Leitura de cache custa uma fração da entrada nova; a saída é a mais cara por token.
+      Lido das transcrições locais deste projeto — nenhum token de agente envolvido.`,
+    footer: `Derivado do disco — marcas do <code>tasks.md</code>, frontmatter e o bloco
+      <code>validation:</code> de cada artefato. Nada aqui é reportado pelo agente.`,
+    legendRead: "leitura de cache", legendFresh: "entrada nova", legendOut: "saída",
+  },
+};
+
+let lang = (() => {
+  try { return localStorage.getItem("sdd-lang") || null; } catch (e) { return null; }
+})();
+const T = () => STRINGS[lang] || STRINGS.en;
+
+function setLang(next) {
+  lang = next;
+  try { localStorage.setItem("sdd-lang", next); } catch (e) { /* private window */ }
+  lastSeen = null;
+  poll();
+}
+
+const MARKS = { done: "×", in_progress: "›", blocked: "!", pending: "·" };
+const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) =>
+  ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+
+function phaseClass(p) {
+  if (!p.exists) return "";
+  if (p.tier2_verdict === "FAIL") return "fail";
+  if (["active", "resolved", "done", "ready", "completed", "accepted"].includes(p.status))
+    return "active";
+  return "draft";
+}
+
+function renderPhases(phases) {
+  return `<div class="pipeline">` + phases.map((p) => {
+    if (!p.exists) {
+      return `<div class="phase"><div class="name">${esc(p.phase)}</div>
+              <div class="meta">${esc(T().notStarted)}</div></div>`;
+    }
+    const verdict = p.tier2_verdict;
+    let score = "";
+    if (verdict === "PASS" || verdict === "FAIL") {
+      const cls = verdict === "PASS" ? "pass" : "fail";
+      const depth = p.judge_depth ? ` ${esc(p.judge_depth)}` : "";
+      score = `<span class="score ${cls}">${esc(p.tier2_score)}</span> ${esc(verdict)}${depth}`;
+    } else if (verdict === "n/a") {
+      score = esc(T().noRubric);
+    }
+    const lines = p.lines ? ` &middot; ${p.lines} ${esc(T().lines)}` : "";
+    return `<div class="phase ${phaseClass(p)}">
+      <div class="name">${esc(p.phase)}</div>
+      <div class="meta">${esc(p.status ?? "—")}${lines}</div>
+      <div class="meta">${score}</div>
+    </div>`;
+  }).join("") + `</div>`;
+}
+
+function renderTasks(tasks) {
+  if (!tasks.length) return `<p class="empty">${esc(T().noTasks)}</p>`;
+  // Newest first: the work that just happened, and the work about to happen, sit
+  // at the top. In plan order a mid-execution feature buries the live edge under
+  // every task already finished, which is the opposite of what a progress view
+  // is for. tasks.md keeps dependency order on disk; only the display reverses.
+  let last = null;
+  const rows = tasks.slice().reverse().map((t) => {
+    let head = "";
+    if (t.milestone !== last) {
+      last = t.milestone;
+      head = `<tr class="mstone"><td colspan="4">${esc(t.milestone ?? T().tasks)}</td></tr>`;
+    }
+    const files = t.files.length
+      ? `<span class="files">${esc(t.files.join("  "))}</span>` : "";
+    return head + `<tr class="${esc(t.state)}">
+      <td class="mark">${MARKS[t.state] ?? "?"}</td>
+      <td><code>${esc(t.id)}</code></td>
+      <td class="desc">${esc(t.description)}${files}</td>
+      <td class="agent">${esc(t.agent ?? "")}</td>
+    </tr>`;
+  }).join("");
+  return `<div class="panel scroll"><table>
+    <thead><tr><th></th><th>${esc(T().thTask)}</th><th>${esc(T().thWhat)}</th><th>${esc(T().thAgent)}</th></tr></thead>
+    <tbody>${rows}</tbody></table></div>`;
+}
+
+function renderFeature(f) {
+  const done = f.tasks.filter((t) => t.state === "done").length;
+  const pct = f.tasks.length ? Math.round((done / f.tasks.length) * 100) : 0;
+  const blocked = f.tasks.filter((t) => t.state === "blocked");
+  return `
+    <h2>${esc(f.name)}</h2>
+    ${renderPhases(f.phases)}
+    ${f.tasks.length ? `<div class="sub" style="margin:14px 0 0">
+        ${esc(T().milestone)} ${esc(f.milestone ?? "—")} &middot; ${done}/${f.tasks.length} ${esc(T().tasks.toLowerCase())}
+        ${f.progress ? `&middot; ${esc(T().declared)} ${esc(f.progress)}` : ""}
+        <div class="bar"><i style="width:${pct}%"></i></div>
+      </div>` : ""}
+    <h2>${esc(T().tasks)}</h2>
+    ${renderTasks(f.tasks)}
+    ${blocked.length || f.blockers.length ? `<h2>${esc(T().blockers)}</h2>
+      <div class="panel"><ul class="blockers">
+        ${blocked.map((t) => `<li><code>${esc(t.id)}</code> ${esc(T().isBlocked)}</li>`).join("")}
+        ${f.blockers.map((b) => `<li>${esc(b)}</li>`).join("")}
+      </ul></div>` : ""}`;
+}
+
+const fmt = (n) => n >= 1e6 ? (n / 1e6).toFixed(1) + "M"
+                 : n >= 1e3 ? Math.round(n / 1e3) + "k" : String(n);
+
+function renderUsage(usage, sources) {
+  const unset = (sources || []).filter((s) => !s.configured).map((s) => s.agent);
+  const hint = unset.length
+    ? `<p class="note">${esc(T().notReading(unset.join(", ")))}</p>` : "";
+  if (!usage || !usage.length) {
+    return `<h2>${esc(T().usage)}</h2><div class="panel"><p class="empty">${esc(T().noSessions)}</p>${hint}</div>`;
+  }
+  const rows = usage.map((s, i) => `<tr class="${i === 0 ? "now" : ""}">
+      <td class="label-cell" data-session="${esc(s.session)}" title="click to rename">${
+        s.label ? esc(s.label) : `<span class="ph">${esc(s.session)}</span>`
+      }${i === 0 ? " &middot; " + esc(T().latest) : ""}</td>
+      <td><span class="agent-tag ${esc(s.agent)}">${esc(s.agent)}</span></td>
+      <td class="num">${s.turns}</td>
+      <td class="num">${fmt(s.avg_context)}</td>
+      <td class="num">${fmt(s.cache_read)}</td>
+      <td class="num">${fmt(s.cache_write + s.input)}</td>
+      <td class="num">${fmt(s.output)}</td>
+    </tr>`).join("");
+  const s0 = usage[0];
+  const total = s0.cache_read + s0.cache_write + s0.input + s0.output || 1;
+  const pct = (n) => (100 * n / total).toFixed(1) + "%";
+  return `<h2>${esc(T().usage)}</h2>
+    <div class="panel scroll">
+      <table class="cost">
+        <thead><tr><th>${esc(T().thSession)} <span style="font-weight:400">(${esc(T().rename)})</span></th><th>${esc(T().thAgent)}</th><th class="num">${esc(T().thTurns)}</th><th class="num">${esc(T().thContext)}</th>
+          <th class="num">${esc(T().thRead)}</th><th class="num">${esc(T().thFresh)}</th><th class="num">${esc(T().thOut)}</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+      <div class="stack">
+        <i class="k-read" style="width:${pct(s0.cache_read)}"></i>
+        <i class="k-write" style="width:${pct(s0.cache_write + s0.input)}"></i>
+        <i class="k-out" style="width:${pct(s0.output)}"></i>
+      </div>
+      <div class="legend">
+        <span class="sw k-read"></span>${esc(T().legendRead)} ${pct(s0.cache_read)}
+        <span class="sw k-write"></span>${esc(T().legendFresh)} ${pct(s0.cache_write + s0.input)}
+        <span class="sw k-out"></span>${esc(T().legendOut)} ${pct(s0.output)}
+      </div>
+      <p class="note">${T().costNote(fmt(s0.avg_context), s0.turns)}</p>${hint}
+    </div>`;
+}
+
+let activeProject = 0;
+
+function renderTabs(projects) {
+  if (projects.length < 2) return "";
+  return `<div class="tabs" role="tablist">` + projects.map((p, i) => {
+    const open = p.features.reduce((n, f) =>
+      n + f.tasks.filter((t) => t.state !== "done").length, 0);
+    const badge = open ? `<span class="badge">${open} ${esc(T().open)}</span>` : "";
+    return `<button class="tab" role="tab" data-i="${i}"
+            aria-selected="${i === activeProject}">${esc(p.repo)}${badge}</button>`;
+  }).join("") + `</div>`;
+}
+
+function render(data) {
+  // The viewer's own choice wins; the --lang flag is only the default.
+  if (lang === null && data.lang) lang = data.lang;
+  const projects = data.projects || [];
+  if (activeProject >= projects.length) activeProject = 0;
+  const p = projects[activeProject];
+
+  document.getElementById("repo").textContent =
+    T().title + (p ? ` — ${p.repo}` : "");
+  document.getElementById("foot").innerHTML = T().footer;
+  document.querySelectorAll(".lang-btn").forEach((b) =>
+    b.setAttribute("aria-selected", String(b.dataset.lang === (lang || "en"))));
+
+  if (!p) {
+    document.getElementById("out").innerHTML =
+      `<p class="empty">${esc(T().noProjects)}</p>`;
+    return;
+  }
+
+  const body = p.features.length
+    ? p.features.map(renderFeature).join("")
+    : `<p class="empty">${esc(T().noFeatures)}</p>`;
+  const adrs = p.adrs.length
+    ? `<h2>${esc(T().adrs)}</h2><div class="panel"><ul>` + p.adrs.map((a) =>
+        `<li><code>${esc(a.id ?? a.file)}</code> — ${esc(a.status ?? "?")}</li>`).join("") +
+      `</ul></div>` : "";
+  const events = p.events.length
+    ? `<h2>${esc(T().inFlight)}</h2><div class="panel"><ul class="events">` + p.events.slice(-12).map((e) =>
+        `<li><code>${esc(e.at ?? "")}</code> ${esc(e.event ?? JSON.stringify(e))}</li>`).join("") +
+      `</ul></div>` : "";
+
+  document.getElementById("out").innerHTML =
+    renderTabs(projects) + body + adrs + events + renderUsage(p.usage, p.sources);
+
+  const lc = p.last_change;
+  document.getElementById("live").textContent = lc
+    ? T().lastChange(lc.seconds_ago, lc.file) : "";
+}
+
+// Switching projects and renaming a session are the only interactions on this
+// page, so they are delegated from the container rather than re-bound on every
+// render.
+document.querySelector(".langs").addEventListener("click", (ev) => {
+  const btn = ev.target.closest(".lang-btn");
+  if (btn) setLang(btn.dataset.lang);
+});
+
+document.getElementById("out").addEventListener("click", (ev) => {
+  const tab = ev.target.closest(".tab");
+  if (tab) {
+    activeProject = Number(tab.dataset.i);
+    lastSeen = null;              // force a redraw with the new selection
+    poll();
+    return;
+  }
+  const cell = ev.target.closest(".label-cell");
+  if (cell && !cell.querySelector("input")) startRename(cell);
+});
+
+function startRename(cell) {
+  const session = cell.dataset.session;
+  const current = cell.querySelector(".ph") ? "" : cell.textContent.split(" · ")[0].trim();
+  const input = document.createElement("input");
+  input.value = current;
+  input.placeholder = session;
+  input.maxLength = 80;
+  cell.textContent = "";
+  cell.appendChild(input);
+  input.focus();
+  input.select();
+
+  let settled = false;
+  const finish = async (save) => {
+    if (settled) return;
+    settled = true;
+    if (save) {
+      try {
+        await fetch("/rename", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ session, label: input.value.trim() }),
+        });
+      } catch (err) { /* the next poll will show the unchanged value */ }
+    }
+    lastSeen = null;              // pull the stored label back rather than guessing
+    poll();
+  };
+  input.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") finish(true);
+    if (e.key === "Escape") finish(false);
+  });
+  input.addEventListener("blur", () => finish(true));
+}
+
+// Re-render only when the state actually changed. Rebuilding the DOM on every
+// poll throws away the scroll position once a second, which makes a page longer
+// than the viewport impossible to read.
+let lastSeen = null;
+
+async function poll() {
+  const sub = document.querySelector(".sub");
+  const tick = document.getElementById("tick");
+  try {
+    const res = await fetch("/status.json", { cache: "no-store" });
+    if (!res.ok) throw new Error(res.status);
+    const body = await res.text();
+    if (body !== lastSeen) {
+      lastSeen = body;
+      render(JSON.parse(body));
+      tick.textContent = T().updated + " " + new Date().toLocaleTimeString();
+    }
+    sub.classList.remove("stale");
+  } catch (err) {
+    sub.classList.add("stale");
+    tick.textContent = T().down;
+  }
+}
+poll();
+setInterval(poll, 1000);
+</script>
+</body>
+</html>

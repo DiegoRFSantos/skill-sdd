@@ -1,5 +1,19 @@
 # Executing the Plan
 
+## This should be a fresh session
+
+`references/artifact-plan-tasks.md` hands off to a new session once `tasks.md`
+is gated, and this file is where that session lands. If you are executing in
+the same session that authored the plan, that is allowed — the human may have
+chosen it — but the context window is carrying the discovery transcript and
+every gate round, and each task dispatch inherits that weight.
+
+Everything execution needs is on disk. `SKILL.md` Step 1 reconstructs it:
+
+```bash
+grep -H '^status:\|^progress:\|^current_milestone:' .specs/features/*/*.md 2>/dev/null
+```
+
 ## Preconditions
 
 Execution does not start on a hunch that `tasks.md` "looks ready." It starts
@@ -46,6 +60,11 @@ Two situations, and only two, change this:
   edit, and `references/quality-gate.md` already governs it: re-run both
   tiers on the changed artifact before its work is executed.
 
+A `validation:` block also records `judge_model` and `judge_depth`. Read them,
+do not act on them: an artifact gated in the `fast` lane is gated. If the human
+decides a fast-lane PASS was not enough for a particular artifact, that is their
+call to make explicitly, not a re-validation you start on your own.
+
 If the human explicitly asks for a re-validation at implementation time,
 run it — an explicit request outranks the default, the same way it does
 everywhere else in this skill. What is forbidden is deciding to re-validate
@@ -68,12 +87,43 @@ all `[x]`, merge its worktree back and tear it down; don't let worktrees
 accumulate past the milestone that opened them.
 
 **A fresh subagent per task, never a shared one.** Each task is dispatched
-to a new subagent instance with a self-contained prompt: the task's own
-description and tags, the exact slice of `design.md` and/or `spec.md` it
-implements (the section, contract, or BR/AC/EC ids the task line cites —
-not the whole document), and nothing else. The subagent has no memory of
-any other task dispatch, this session's earlier conversation, or how a
-sibling task in the same stream was implemented. This mirrors how this
+to a new subagent instance with a self-contained prompt containing exactly
+four things and nothing else:
+
+1. The task's own description and tags.
+2. **The literal paths from its `[files: ...]` tag**, and the matching rows of
+   `design.md` §9's File Map. The subagent is told where to write; it never
+   searches for it.
+3. The exact slice of `design.md` and/or `spec.md` the task implements — the
+   section, contract, or BR/AC/EC ids the task line cites, not the whole
+   document — **including the named symbols and signatures verbatim.** Give the
+   subagent the extractor command rather than pasting the slice, so the text
+   lands in its disposable context instead of the orchestrating one:
+
+   ```bash
+   python3 "$SDD"/scripts/sdd_extract.py \
+     .specs/features/<feature>/design.md --section 3.1
+   python3 "$SDD"/scripts/sdd_extract.py \
+     .specs/features/<feature>/spec.md --ids BR-01,AC-02
+   ```
+
+   Never `cat` the whole artifact for this. A section is a fraction of the file,
+   and — because context is re-read on every later turn — that fraction keeps
+   paying for the rest of the session.
+4. How its work will be verified.
+
+When the dashboard is on, append one event line per dispatch
+(`references/dashboard.md`) — a task moves from `[ ]` to `[/]` on disk, but the
+minutes in between are invisible without it.
+
+Points 2 and 3 are what make a small model safe here. A subagent on a
+Haiku-class model does not fail loudly on a vague reference: it produces a
+plausible path and a plausible function name, both wrong, and the failure only
+surfaces at merge. Never send a task description that says "the validation
+module" when `design.md` says `src/payments/split_validator.py`.
+
+The subagent has no memory of any other task dispatch, this session's earlier
+conversation, or how a sibling task in the same stream was implemented. This mirrors how this
 plugin's own Plans 1–3 were built: read the task, dispatch fresh, verify
 independently, never trust the subagent's self-report without checking. If
 two tasks need to share context beyond what's in `design.md`/`spec.md`,

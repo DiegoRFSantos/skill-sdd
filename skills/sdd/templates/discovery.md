@@ -1,11 +1,11 @@
 ---
-id: DISC-FEAT-PAYMENT-SPLIT # e.g. DISC-FEAT-WALLET-RENAME — must match ^DISC-FEAT-[A-Z0-9-]+$
+id: DISC-FEAT-PAYMENT-SPLIT # must match ^DISC-FEAT-[A-Z0-9-]+$
 type: discovery
-feature: payment-split # e.g. wallet-rename — lowercase, hyphen-separated, must match ^[a-z0-9]+(-[a-z0-9]+)*$
+feature: payment-split # lowercase, hyphen-separated
 created_at: 2026-08-18 # YYYY-MM-DD, date this file was first created
 updated_at: 2026-08-18 # YYYY-MM-DD, date of the most recent edit
 author: Diego # e.g. Diego, or "Payments Team"
-status: resolved # draft while any ledger question is open (status column value: "open"); resolved only once every §5 row reads "resolved"
+status: resolved # draft while any §5 ledger row reads "open"
 validation:                    # discovery.md has no Tier 2 rubric — it is validated live, in-session
   - tier1: pass
   - tier1_at: 2026-08-18
@@ -13,6 +13,8 @@ validation:                    # discovery.md has no Tier 2 rubric — it is val
   - tier2_verdict: n/a
   - tier2_at: n/a
   - tier2_rounds: 0
+  - judge_model: sonnet
+  - judge_depth: fast
   - notes: "Challenge pass and falsification test run in-session; §5 ledger closed with all five questions resolved before status moved to resolved."
 ---
 
@@ -23,10 +25,11 @@ solution already in mind ("add a split-payment button") instead of a problem
 interview, in order. Do not skip to §7 — the decision must be earned by the
 sections above it.
 
-Every section below carries a short worked example in a payment-split style so
-the expected shape is obvious. Replace the example content; keep the headings
-and table columns exactly as they are — the filled file is linted against
-skills/sdd/scripts/rules.json and the section headings must match verbatim.
+Every section carries a short payment-split example so the shape is obvious.
+Replace the content; keep headings and table columns verbatim — they are linted
+against skills/sdd/scripts/rules.json.
+
+Budget 170 lines. Optional: one event-modeling diagram, cap 12 nodes.
 -->
 
 ## 1. Problem Statement

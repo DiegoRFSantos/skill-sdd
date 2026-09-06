@@ -44,6 +44,14 @@ matters, and the linter's `tasks_depends_on` check rejects any id that
 doesn't resolve to a real task, while `tasks_cycles` rejects any circular
 wait.
 
+**Explicit `[files: ...]`.** Every task line also carries the literal
+repo-relative paths it may touch, drawn from `design.md` §9's File Map. The
+linter's `tasks_tags` check blocks a task line without one, the same as a
+missing `[Agent:]` or `[REQUIRED]`. A task dispatched to a fresh subagent — with
+no session memory, often on a small model — has no way to find out where it is
+meant to write except by being told; an agent left to infer a path produces a
+plausible one that does not exist.
+
 **Deterministic concurrency.** Two tasks may run in parallel exactly when
 neither is in the other's `depends_on` closure. Group such tasks into
 named streams (Stream 1A, Stream 1B, ...) in tasks.md and show them as
@@ -107,7 +115,7 @@ glance, that nothing downstream of a gate can start before every
 `coverage_threshold` in plan.md's frontmatter is never defaulted silently.
 Resolve it in this fixed order, stopping at the first source that applies:
 
-1. **Repo convention** — check `AGENTS.md` or `CLAUDE.md` for a stated
+1. **Repo convention** — check `AGENTS.md`, `CLAUDE.md` or `GEMINI.md` for a stated
    coverage policy (a line/branch percentage, a scope, or an explicit
    statement that the repo does not gate on coverage). If found, use it
    verbatim and note the source.
@@ -154,7 +162,7 @@ token per role (`<model-for-implementation>`, `<model-for-test-authoring>`,
 documented inline as a YAML comment. Resolve each role's actual model in
 this fixed order, stopping at the first source that applies:
 
-1. **Repo convention** — `AGENTS.md` or `CLAUDE.md` names a required or
+1. **Repo convention** — `AGENTS.md`, `CLAUDE.md` or `GEMINI.md` names a required or
    preferred model for this role or for the repo generally. If present,
    use it and note the source; this always wins over the agent's own
    judgment.
@@ -187,6 +195,66 @@ this fixed order, stopping at the first source that applies:
    suggested role in one line, so the user can confirm or override it
    quickly rather than re-deriving the reasoning themselves.
 
+See `references/model-selection.md` for the full procedure: ask what the human
+can actually reach, look up what currently exists rather than answering from
+memory, match each role to its dominant failure mode, and propose a concrete
+model per role with one line of reasoning. **Never present the question as four
+blanks** — a bare "which model for the Coder role?" makes the human do the
+research, which is the opposite of recommending.
+
 Nothing is ever written into `plan.md`'s `allocated_agents` without the
 user's confirmation. The agent may propose a model per role; it may never
 decide on the user's behalf and silently commit that decision to the plan.
+
+## Written to pass
+
+- **Milestones are independently shippable.** Each delivers business value on
+  its own and can be verified without the next one. A milestone sliced by
+  technical layer ("all the models," then "all the controllers") is the failure
+  mode this criterion exists to catch.
+- **Every task has one verifiable outcome**, an `[Agent: Role]` tag, a
+  `[REQUIRED]`/`[OPTIONAL]` tag, and a `[files: ...]` tag. Two outcomes in one
+  line means neither can be marked done honestly.
+- **`[files: ...]` lists literal repo-relative paths**, drawn from `design.md`
+  §9's File Map. Every task is dispatched to a fresh subagent with no session
+  memory — often a small model — and a subagent that has to guess a path
+  invents one. The tag is both the instruction and the blast radius.
+- **Task descriptions name symbols, not descriptions.** "Implement
+  `SplitValidator.validate` per design §3.1", not "implement the validation
+  logic."
+- **`coverage_threshold` is declared** and every milestone has a coverage
+  verification task, `[REQUIRED]` by construction.
+- **The blocker protocol names who decides and what triggers escalation.**
+  "The team will figure it out" is not a protocol.
+- **The DAG in §2 is milestone-level only.** Per-task ordering lives in
+  `tasks.md`'s `depends_on` tags, where the linter checks it for cycles and
+  dangling references. Drawing it twice guarantees one copy goes stale, and a
+  per-task graph does not fit on a screen.
+
+Optional single diagram in `plan.md`: a `gantt` (cap 20 bars) for a schedule,
+or a `flowchart` milestone DAG (cap 12 nodes). Over cap, it is dropped, not
+shrunk.
+
+## Hand off to a fresh session before executing
+
+When `tasks.md` passes its gate, **do not start executing in this session.**
+The session that ran discovery, the interview, and four gate rounds is carrying
+a context window full of material implementation does not need — and every task
+dispatch inherits that weight.
+
+Print the handoff, then stop:
+
+```
+tasks.md gated — <N> milestones, <M> tasks, coverage threshold <T>.
+
+Implementation runs best in a fresh session, so the context window is not
+carrying the discovery transcript. Copy this into a new session:
+
+  Execute the SDD plan at .specs/features/<feature>/tasks.md
+```
+
+Then offer to continue here instead, in one line. This is a recommendation, not
+a refusal: a three-task plan may not be worth a new session, and that is the
+human's call. `SKILL.md` Step 1's state detection reconstructs everything a cold
+session needs from disk, so nothing is lost either way and no state has to be
+passed by hand.

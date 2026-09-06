@@ -2,37 +2,27 @@
 id: PLAN-FEAT-001
 type: plan
 feature: payment-split
-spec_ref: SPEC-FEAT-001      # must resolve to an existing spec artifact
-design_ref: DESIGN-FEAT-001  # must resolve to an existing design artifact
+spec_ref: SPEC-FEAT-001
+design_ref: DESIGN-FEAT-001
 created_at: 2026-08-18
 updated_at: 2026-08-18
 author: Diego
-status: active                # draft | active | completed | blocked | cancelled
+status: active
 allocated_agents:
-  # Model ids are NEVER hardcoded here. Resolution order, checked in this
-  # order and stopping at the first that applies:
-  #   1. Repo convention — AGENTS.md / CLAUDE.md states a model for this role.
-  #   2. The user's explicit answer when asked.
-  #   3. The agent's suggestion, driven by what THIS plan's tasks actually
-  #      build (mechanical scaffolding vs. domain logic vs. contract design
-  #      vs. review), weighing capability against cost, preferring Anthropic
-  #      on a tie but not restricted to Anthropic — offered for confirmation,
-  #      never written in silently.
-  # See references/artifact-plan-tasks.md for the full rule and worked
-  # per-role justifications.
-  - Coder: "claude-sonnet-5"      # tier 3 (task-fit): schema migrations + service/controller implementation is domain logic, not pure scaffolding — needs solid coding capability; Sonnet is the cost-efficient default for this tier
-  - Tester: "claude-haiku-4-5"    # tier 3 (task-fit): test scaffolding + coverage_threshold arithmetic verification (Task 1.6/2.6/3.3) is low-ambiguity and mechanically checkable — the lightest tier suffices
-  - Reviewer: "claude-opus-5"     # tier 3 (task-fit): static analysis + ADR-0002 conformance + Milestone 3 sign-off needs strong judgment and a low false-negative rate on what Coder/Tester missed
-  - Evaluator: "claude-opus-5"    # tier 3 (task-fit): Tier-2 semantic gate scoring is a pure grading role — needs the strongest judgment of the four, since a lenient score here is the failure mode with the highest cost
+
+  - Coder: "resolved at plan time"
+  - Tester: "resolved at plan time"
+  - Reviewer: "resolved at plan time"
+  - Evaluator: "resolved at plan time"
 coverage_threshold:
-  line: 80                     # e.g. 80; or set the whole block to: none (behavioral coverage only)
-  branch: 70                   # e.g. 70
-  scope: "changed files only"  # changed files only | whole module | whole app
+  line: 80
+  branch: 70
+  scope: "changed files only"
 milestones:
   - M1: "Core Split Engine & Persistence"
   - M2: "API Layer, Idempotency & Concurrency Protection"
   - M3: "Payment Ledger Event Integration & Sign-Off"
-dependencies:                  # optional; ADRs this plan's agents must comply with while executing it
+dependencies:
   - ADR-0002
 validation:
   - tier1: pass
@@ -41,45 +31,14 @@ validation:
   - tier2_verdict: PASS
   - tier2_at: 2026-08-18
   - tier2_rounds: 2
-  - notes: "Judged as a pair with TASKS-FEAT-001. Round 1 scored 84 - M2 was a technical-layer slice; re-cut around the recipient-notification path."
+  - judge_model: sonnet
+  - judge_depth: fast
+  - notes: "Round 1 scored 84 - M2 was a technical-layer slice, not independently shippable. Re-cut M2 around the recipient-notification path; milestone criterion went 11/20 to 19/20."
 ---
-
-<!--
-This is the execution contract. It describes WHO builds WHAT, in WHICH
-order, with WHICH quality gates — turning spec.md's WHAT/WHY and design.md's
-HOW into a concurrency-aware delivery schedule that tasks.md then tracks
-task-by-task. It must never invent new business rules or contracts: every
-milestone, harness, and gate here must trace back to an existing BR/AC/EC id
-in spec.md or a component/contract in design.md.
-
-CRITICAL: no model id is ever hardcoded in this file — not in
-`allocated_agents`, not in §4's table. Model selection per role is resolved
-at plan time per the order documented above and in
-references/artifact-plan-tasks.md. A plan that ships with a literal model
-id (e.g. a specific Claude or GPT version string) instead of a resolved
-token is not complete.
-
-This worked example continues the payment-split feature from spec.md
-(SPEC-FEAT-001) and design.md (DESIGN-FEAT-001) verbatim — same BR-01..03,
-AC-01..04, EC-01..04 ids, and the same components and contracts (Split
-Configuration API, Split Validation Service, Split Store, Payment Ledger
-Adapter, SubmitSplit, split.accepted). Replace the example content with your
-own feature's content; keep the headings exactly as they are — this file is
-linted against skills/sdd/scripts/rules.json and the section headings must
-match verbatim.
--->
 
 # Execution Plan: Payment Split Engine
 
 ## 1. Delivery Milestones & Scope Breakdown
-
-<!--
-Each milestone is a vertically-sliced, independently testable increment of
-business value — never a horizontal technical layer (see
-references/artifact-plan-tasks.md, principle 1 and the milestone-derivation
-guidance). Gating criteria must cite real AC/EC ids from spec.md or real
-contracts/sections from design.md.
--->
 
 | Milestone / Sprint | Scope & Value Delivered | Target Outcome | Gating Criteria |
 |---|---|---|---|
@@ -90,69 +49,22 @@ contracts/sections from design.md.
 ## 2. Dependency Graph & Concurrency Model (DAG)
 
 ```mermaid
-graph TD
-    subgraph M1["Milestone 1: Core Split Engine & Persistence"]
-        T11["Task 1.1: Split/Recipient schema migration (Coder)"]
-        T12["Task 1.2: Validate migration apply/rollback (Tester)"]
-        T13["Task 1.3: Scaffold BR-01..03 / EC-01 / EC-04 unit harness (Tester)"]
-        T14["Task 1.4: Implement Split Validation Service (Coder)"]
-        T15["Task 1.5: Validation latency metric [OPTIONAL] (Coder)"]
-        T16["Task 1.6: Verify M1 coverage_threshold (Tester)"]
-    end
-    G1{{"M1 Gate: AC-01..04 + EC-01 pass, coverage_threshold met"}}
-
-    subgraph M2["Milestone 2: API Layer, Idempotency & Concurrency"]
-        T21["Task 2.1: Scaffold SubmitSplit contract tests (Tester)"]
-        T22["Task 2.2: Request/response DTOs & schema validation (Coder)"]
-        T23["Task 2.3: Split Configuration API controller (Coder)"]
-        T24["Task 2.4: Idempotency-Key filter, ADR-0002 (Coder)"]
-        T25["Task 2.5: expires_at / window_elapsed, EC-03 (Coder)"]
-        T26["Task 2.6: Verify M2 coverage_threshold (Tester)"]
-    end
-    G2{{"M2 Gate: contract tests pass, zero duplicate-accepted splits, coverage_threshold met"}}
-
-    subgraph M3["Milestone 3: Payment Ledger Event Integration & Sign-Off"]
-        T31["Task 3.1: Payment Ledger Adapter, retry + circuit breaker (Coder)"]
-        T32["Task 3.2: End-to-end broker integration tests (Tester)"]
-        T33["Task 3.3: Verify M3 coverage_threshold (Tester)"]
-        T34["Task 3.4: Static analysis, ADR-0002 conformance, sign-off (Reviewer)"]
-    end
-
-    T11 --> T12
-    T13 --> T14
-    T14 --> T15
-    T12 --> T16
-    T14 --> T16
-    T16 --> G1
-
-    G1 --> T21
-    G1 --> T22
-    T21 --> T23
-    T22 --> T23
-    T23 --> T24
-    T24 --> T25
-    T24 --> T26
-    T25 --> T26
-    T26 --> G2
-
-    G2 --> T31
-    T31 --> T32
-    T31 --> T33
-    T32 --> T34
-    T33 --> T34
+flowchart TD
+    M1["M1: Core Split Engine & Persistence"] --> G1{{"M1 Gate: AC-01..04, EC-01, coverage met"}}
+    G1 --> M2["M2: API, Idempotency & Concurrency"]
+    M2 --> G2{{"M2 Gate: contract tests, zero duplicate accepts, coverage met"}}
+    G2 --> M3["M3: Ledger Integration & Sign-Off"]
+    M3 --> G3{{"M3 Gate: broker e2e, ADR-0002 conformance, sign-off"}}
 ```
 
 ### Concurrency Rules
 
-* Stream 1A (Persistence: Task 1.1 → 1.2) and Stream 1B (Domain Validation: Task 1.3 → 1.4 → 1.5) execute simultaneously during Milestone 1 — neither is in the other's `depends_on` closure, and the migration files and the validation-service files do not overlap.
-* Milestone 2 cannot begin until the Milestone 1 gate closes: both Task 1.2 (persistence verified) and Task 1.6 (coverage_threshold met) must be `[x]` before Task 2.1 or Task 2.2 may start.
-* Within Milestone 2, Task 2.1 (contract test scaffolding) and Task 2.2 (DTO implementation) run in parallel — both depend only on Milestone 1 output, not on each other — then converge on Task 2.3 (controller wiring).
-* Task 2.4 (idempotency filter) and Task 2.5 (expiry window) are deliberately sequential, not parallel, because both modify the same Split Configuration API middleware chain (§1.1 of design.md) — running them concurrently risks a merge conflict on the same files.
-* Milestone 3 cannot begin until the Milestone 2 gate closes (Task 2.4, 2.5, and 2.6 all `[x]`).
+* Stream 1A (persistence: Task 1.1 -> 1.2) and Stream 1B (validation: Task 1.3 -> 1.4 -> 1.5) run simultaneously: neither is in the other's `depends_on` closure, and `db/migrations/` and `src/payments/split_validator.py` do not overlap.
+* Milestone 2 does not begin until Task 1.2 and Task 1.6 are both `[x]`.
+* Within Milestone 2, Task 2.1 and Task 2.2 run in parallel, then converge on Task 2.3.
+* Task 2.4 and Task 2.5 are deliberately sequential: both modify `src/payments/split_controller.py`, so running them concurrently risks a conflict in the same file.
 
 ## 3. Pre-Implementation Test Harness Strategy
-
-<!-- Test suites must exist before the business logic they test — see references/artifact-plan-tasks.md, principle 5. -->
 
 Before generating business code, automated test scaffolding must be instantiated:
 
@@ -163,19 +75,12 @@ Before generating business code, automated test scaffolding must be instantiated
 
 ## 4. Agent Roles & Allocation
 
-<!--
-Designated Model is never a literal model id — always the resolved token
-from this plan's frontmatter `allocated_agents`. See
-references/artifact-plan-tasks.md for the resolution order and how each
-suggestion below would be justified once a real model is proposed.
--->
-
 | Role Name | Designated Model | Execution Domain |
 |---|---|---|
-| Coder | `claude-sonnet-5` (frontmatter `allocated_agents.Coder`) | Schema migrations, Split Validation Service, Split Configuration API controller, Idempotency-Key filter, expiry handling, Payment Ledger Adapter. |
-| Tester | `claude-haiku-4-5` (frontmatter `allocated_agents.Tester`) | Unit/contract/integration test scaffolding, migration validation, coverage_threshold verification per milestone (Task 1.6, 2.6, 3.3). |
-| Reviewer | `claude-opus-5` (frontmatter `allocated_agents.Reviewer`) | Static analysis, ADR-0002 conformance verification (design §7), final Milestone 3 sign-off. |
-| Evaluator | `claude-opus-5` (frontmatter `allocated_agents.Evaluator`) | Tier-2 gate scoring of spec.md/design.md/plan.md artifacts (the Gate score recorded in each artifact's Change Log) — independent of the Coder/Tester/Reviewer execution loop. |
+| Coder | the model resolved into `allocated_agents.Coder` | Schema migrations, Split Validation Service, Split Configuration API controller, Idempotency-Key filter, expiry handling, Payment Ledger Adapter. |
+| Tester | the model resolved into `allocated_agents.Tester` | Unit/contract/integration test scaffolding, migration validation, coverage_threshold verification per milestone (Task 1.6, 2.6, 3.3). |
+| Reviewer | the model resolved into `allocated_agents.Reviewer` | Static analysis, ADR-0002 conformance verification (design §7), final Milestone 3 sign-off. |
+| Evaluator | the model resolved into `allocated_agents.Evaluator` | Tier-2 gate scoring of spec.md/design.md/plan.md artifacts (the Gate score recorded in each artifact's Change Log) — independent of the Coder/Tester/Reviewer execution loop. |
 
 ## 5. Circuit Breaker & Blocker Protocol
 
