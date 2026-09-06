@@ -61,10 +61,70 @@ padrão.
 Depois é só falar normalmente — a skill se ativa sozinha em pedidos de
 feature, mudança, bug ou revisão de artefato.
 
-**Requisitos.** `python3` **ou** `node` para o linter (qualquer um dos dois
-serve; os dois runners produzem exatamente os mesmos achados). `git` é
-opcional: sem ele a execução cai para modo sequencial, sem worktrees, e a
-skill avisa em voz alta que está degradada.
+### Instalação manual (sem marketplace)
+
+Se os comandos acima não funcionarem, ou se você preferir só copiar os
+arquivos, dá para instalar na mão. São dois passos.
+
+**1. Baixe os arquivos.** Clique em **Code → Download ZIP** na página do
+repositório no GitHub e descompacte. Ou, se você usa git:
+
+```bash
+git clone https://github.com/DiegoRFSantos/skill-sdd.git
+```
+
+**2. Copie a pasta `skills/sdd` para um destes dois lugares:**
+
+| Onde colar | Caminho | Quando usar |
+|---|---|---|
+| **Só neste projeto** | `<seu-projeto>/.claude/skills/sdd` | Quer testar, ou usar só num repositório |
+| **Em todos os projetos** | `~/.claude/skills/sdd` | Quer a skill sempre disponível |
+
+No terminal, a partir da pasta que você baixou:
+
+```bash
+mkdir -p ~/.claude/skills
+cp -r skills/sdd ~/.claude/skills/sdd
+```
+
+Ou, para um projeto só:
+
+```bash
+mkdir -p /caminho/do/seu-projeto/.claude/skills
+cp -r skills/sdd /caminho/do/seu-projeto/.claude/skills/sdd
+```
+
+No Finder ou no Explorador de Arquivos funciona igual: arraste a pasta `sdd`
+(a que está dentro de `skills/`) para dentro de `.claude/skills/`.
+
+**Pronto.** No final você precisa ter este arquivo existindo:
+
+```
+~/.claude/skills/sdd/SKILL.md          (ou .claude/skills/sdd/SKILL.md no projeto)
+```
+
+Abra o Claude Code de novo e peça alguma coisa — "quero criar uma feature de
+X". A skill se ativa sozinha.
+
+> **A pasta `.claude` começa com ponto e fica escondida.** No Finder, aperte
+> `Cmd + Shift + .` para ver arquivos ocultos. Se ela não existir, pode criar.
+
+Você **não** precisa copiar o resto do repositório — `tests/`, `docs/` e
+`.claude-plugin/` só interessam a quem for mexer na própria skill.
+
+---
+
+## Requisitos
+
+- **`python3` ou `node`** para o linter. Qualquer um dos dois serve: os dois
+  runners produzem exatamente os mesmos achados, e a suíte de testes falha se
+  eles discordarem. Quase todo Mac e Linux já vem com pelo menos um.
+- **`git`** é opcional. Sem ele a execução cai para modo sequencial, sem
+  worktrees — e a skill avisa em voz alta que está degradada, em vez de fingir
+  que está tudo normal.
+
+Nada mais. Nenhuma dependência para instalar, nenhuma chave de API, nenhum
+serviço externo.
 
 ---
 
@@ -550,7 +610,10 @@ Um exemplo completo e lintado ponta a ponta vive em
 
 ## Ferramentas de linha de comando
 
-Os três scripts rodam fora da skill, direto no terminal.
+Os três scripts rodam fora da skill, direto no terminal. Os exemplos abaixo
+usam o caminho de quem clonou o repositório; se você instalou pelo marketplace
+ou copiou pra `.claude/skills/`, os scripts estão em `<pasta-da-skill>/scripts/`
+— a própria skill descobre esse caminho sozinha antes de rodar qualquer coisa.
 
 ### Linter (Tier 1)
 

@@ -20,7 +20,7 @@ about it.
 ## Running it
 
 ```bash
-python3 ${CLAUDE_PLUGIN_ROOT}/skills/sdd/scripts/sdd_status.py --serve --repo-root .
+python3 "$SDD"/scripts/sdd_status.py --serve --repo-root .
 ```
 
 Then open `http://127.0.0.1:4517`. `--port` changes the port.
@@ -59,7 +59,7 @@ page is blocked by CORS.
 One-shot, no server, for piping into something else:
 
 ```bash
-python3 ${CLAUDE_PLUGIN_ROOT}/skills/sdd/scripts/sdd_status.py --json --repo-root .
+python3 "$SDD"/scripts/sdd_status.py --json --repo-root .
 ```
 
 The page polls once a second and re-renders only when the state actually

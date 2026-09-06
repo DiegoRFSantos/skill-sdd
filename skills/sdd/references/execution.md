@@ -101,9 +101,9 @@ four things and nothing else:
    lands in its disposable context instead of the orchestrating one:
 
    ```bash
-   python3 ${CLAUDE_PLUGIN_ROOT}/skills/sdd/scripts/sdd_extract.py \
+   python3 "$SDD"/scripts/sdd_extract.py \
      .specs/features/<feature>/design.md --section 3.1
-   python3 ${CLAUDE_PLUGIN_ROOT}/skills/sdd/scripts/sdd_extract.py \
+   python3 "$SDD"/scripts/sdd_extract.py \
      .specs/features/<feature>/spec.md --ids BR-01,AC-02
    ```
 

@@ -26,9 +26,9 @@ task subagents an `sdd_extract.py` command instead of a slice.
 **2. Extract, do not `cat`.**
 
 ```bash
-python3 ${CLAUDE_PLUGIN_ROOT}/skills/sdd/scripts/sdd_extract.py design.md --outline
-python3 ${CLAUDE_PLUGIN_ROOT}/skills/sdd/scripts/sdd_extract.py design.md --section 3.1
-python3 ${CLAUDE_PLUGIN_ROOT}/skills/sdd/scripts/sdd_extract.py spec.md --ids BR-01,AC-02
+python3 "$SDD"/scripts/sdd_extract.py design.md --outline
+python3 "$SDD"/scripts/sdd_extract.py design.md --section 3.1
+python3 "$SDD"/scripts/sdd_extract.py spec.md --ids BR-01,AC-02
 ```
 
 `--section 3.1` on the worked design returns 485 characters against the file's
@@ -94,7 +94,7 @@ writing the `validation:` block on any artifact, get the real number first — t
 agent cannot read its own context size, so this reads the live transcript:
 
 ```bash
-python3 ${CLAUDE_PLUGIN_ROOT}/skills/sdd/scripts/sdd_status.py --context --repo-root .
+python3 "$SDD"/scripts/sdd_status.py --context --repo-root .
 ```
 
 Then offer the reset in one line, **with the estimate attached**, and stop:

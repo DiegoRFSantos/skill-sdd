@@ -124,7 +124,7 @@ made actually affects them.
 Fast-track does not skip Tier 1. Run it on the updated `spec.md`:
 
 ```bash
-python3 ${CLAUDE_PLUGIN_ROOT}/skills/sdd/scripts/sdd_lint.py <spec.md> --repo-root .
+python3 "$SDD"/scripts/sdd_lint.py <spec.md> --repo-root .
 ```
 
 Tier 1 is cheap and deterministic — it catches real mistakes (a broken

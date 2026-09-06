@@ -40,8 +40,10 @@ Sections 1.2, 3.3, 3.4 and 6.2 are conditional — see references/design-extensi
 for what triggers each. A conditional section that does not apply is marked
 _Not applicable: <reason>_ and never silently dropped.
 
-A filled-in example lives at
-tests/golden/payment-split/.specs/features/payment-split/design.md.
+A filled-in example lives in the repository, at
+tests/golden/payment-split/.specs/features/payment-split/design.md. It is not
+copied by a manual install and is not needed to use this template - the worked
+example below is complete on its own.
 -->
 
 ## 0. At a Glance

@@ -87,6 +87,24 @@ optional; an absent key means ask. **`judge_model` and `judge_depth` are never
 guessed.** `dashboard: on` → start it once, give the URL once, never mention it
 again (`references/dashboard.md`).
 
+## Step 0 — Find the scripts, whichever way this was installed
+
+The three install shapes put the scripts in different places, and only a plugin
+install sets `CLAUDE_PLUGIN_ROOT`. Resolve the directory once per session and
+reuse it; never hardcode one of the three paths.
+
+```bash
+SDD=$(for d in "$CLAUDE_PLUGIN_ROOT/skills/sdd" "$HOME/.claude/skills/sdd" ".claude/skills/sdd"; do
+  [ -f "$d/scripts/sdd_lint.py" ] && echo "$d" && break
+done)
+echo "${SDD:-NOT FOUND}"
+```
+
+Every script invocation in this skill is then `"$SDD/scripts/<script>.py"`. If
+the resolver prints `NOT FOUND`, say so plainly — the deterministic gate cannot
+run, and `references/quality-gate.md`'s Tier 1 checklist has to be walked by
+hand instead.
+
 ## Step 1 — Detect state before doing anything
 
 State lives on disk, not in memory. A cold session reconstructs it:
@@ -173,13 +191,13 @@ section's cap, and the human is the only validator of its content.
 Run Tier 1 first — it is cheap and deterministic:
 
 ```bash
-python3 ${CLAUDE_PLUGIN_ROOT}/skills/sdd/scripts/sdd_lint.py <artifact> --repo-root .
+python3 "$SDD"/scripts/sdd_lint.py <artifact> --repo-root .
 ```
 
 If `python3` is unavailable, use the Node runner:
 
 ```bash
-node ${CLAUDE_PLUGIN_ROOT}/skills/sdd/scripts/sdd_lint.mjs <artifact> --repo-root .
+node "$SDD"/scripts/sdd_lint.mjs <artifact> --repo-root .
 ```
 
 If neither runtime exists, walk the Tier 1 checklist in `references/quality-gate.md`

@@ -34,8 +34,10 @@ Budget: 200 lines. Over that the linter raises a non-blocking review finding —
 allowed for a genuinely large capability, but it should be a decision, not
 drift. Tables are the default; prose only where a rule genuinely needs it.
 
-A filled-in example of every section lives in
-tests/golden/payment-split/.specs/features/payment-split/spec.md.
+A filled-in example of every section lives in the repository, at
+tests/golden/payment-split/.specs/features/payment-split/spec.md. It is not
+copied by a manual install and is not needed to use this template - the
+worked example below is complete on its own.
 -->
 
 ## 0. At a Glance
